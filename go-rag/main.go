@@ -1,69 +1,89 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"os"
+    "fmt"
+    "net/http"
 
-	"go-rag/internal/ent"
-	"go-rag/internal/ent/user" // Import the user package for predicates
+    "github.com/go-chi/chi/v5"
+    "github.com/joho/godotenv"
+    "github.com/sirupsen/logrus"
 
-	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
+    "go-rag/internal/auth"
+    "go-rag/internal/handlers"
+    "go-rag/internal/user"
+    "go-rag/internal/db"
 )
 
 func main() {
-	// Load .env file
-	err := godotenv.Load()
-	if err != nil {
-		// This is not a fatal error if the env var is set in the system
-		log.Println("Warning: .env file not found, relying on system environment variables.")
-	}
+    // Configure logrus
+    logrus.SetFormatter(&logrus.JSONFormatter{})
+    logrus.SetLevel(logrus.InfoLevel)
+    
+    logrus.Info("starting server...")
 
-	client := initEntClient()
-	defer client.Close()
+    // Load .env file
+    if err := godotenv.Load(); err != nil {
+        logrus.Warn("no .env file found, using system environment variables")
+    } else {
+        logrus.Info(".env file loaded successfully")
+    }
 
-	ctx := context.Background()
+    // Load JWT secret
+    auth.LoadSecret()
 
-	// Try inserting a dummy user
-	// If it already exists, this will produce an error, which is expected on subsequent runs.
-	u, err := client.User.
-		Create().
-		SetEmail("test@example.com").
-		SetPasswordHash("hashedpassword").
-		Save(ctx)
+    // setup DB client
+    logrus.Debug("initializing database client")
+    client := db.NewClient()
+    defer func() {
+        logrus.Debug("closing database client")
+        if err := client.Close(); err != nil {
+            logrus.WithError(err).Error("error closing DB client")
+        } else {
+            logrus.Debug("DB client closed successfully")
+        }
+    }()
 
-	if err != nil {
-		// We'll log the error but continue, as the user likely already exists.
-		fmt.Println("\nCould not create user (it probably already exists):", err)
-	} else {
-		fmt.Println("Created user:", u)
-	}
+    // setup services
+    logrus.Debug("initializing services")
+    userService := &user.Service{Client: client}
+    authHandler := &handlers.AuthHandler{UserService: userService}
+    logrus.Info("services initialized successfully")
 
-	// Fetch the user back
-	fmt.Println("\nFetching user 'test@example.com'...")
-	fetchedUser, err := client.User.
-		Query().
-		Where(user.EmailEQ("test@example.com")).
-		Only(ctx)
-	if err != nil {
-		log.Fatalf("failed querying user: %v", err)
-	}
-	fmt.Println("Successfully fetched user:", fetchedUser)
-}
+    // setup router
+    logrus.Debug("setting up HTTP router")
+    r := chi.NewRouter()
 
-// initEntClient connects to the database and returns an ent client.
-func initEntClient() *ent.Client {
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		log.Fatal("DATABASE_URL environment variable is not set. Please create a .env file or set it in your environment.")
-	}
+    // Public routes
+    r.Post("/signup", authHandler.Signup)
+    r.Post("/login", authHandler.Login)
+    logrus.Info("public routes registered", "routes", []string{"/signup", "/login"})
 
-	client, err := ent.Open("postgres", dbURL)
-	if err != nil {
-		log.Fatalf("failed opening connection to postgres: %v", err)
-	}
-	// NOTE: We DO NOT run client.Schema.Create() here because we are using Atlas for migrations.
-	return client
+    // Protected group
+    r.Group(func(protected chi.Router) {
+        protected.Use(auth.AuthMiddleware)
+
+        protected.Get("/me", func(w http.ResponseWriter, r *http.Request) {
+            userID, _ := auth.GetUserID(r.Context())
+            logrus.WithField("user_id", userID).Info("user accessed /me endpoint")
+            w.Header().Set("Content-Type", "application/json")
+            w.WriteHeader(http.StatusOK)
+            _, err := w.Write([]byte(fmt.Sprintf(`{"message":"Hello, user %d"}`, userID)))
+            if err != nil {
+                logrus.WithFields(logrus.Fields{
+                    "user_id": userID,
+                    "error": err,
+                }).Error("error writing response for user")
+            }
+        })
+        
+        // User deletion endpoint
+        protected.Delete("/user", authHandler.DeleteUser)
+    })
+    logrus.Info("protected routes registered", "routes", []string{"/me", "DELETE /user"})
+
+    addr := ":8080"
+    logrus.WithField("address", addr).Info("server starting")
+    if err := http.ListenAndServe(addr, r); err != nil {
+        logrus.WithError(err).Fatal("server failed to start")
+    }
 }

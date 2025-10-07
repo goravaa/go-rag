@@ -1,63 +1,75 @@
 package auth
 
 import (
-    "context"
-    "net/http"
-    "strings"
-
-    "github.com/sirupsen/logrus"
+	"context"
+	"go-rag/internal/db"      
+	"go-rag/ent/ent/session"
+	"net/http"
+	"strings"
+   "github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 type contextKey string
 
 const UserIDKey contextKey = "userID"
 
-// Middleware for Chi
+// Middleware for Chi router
+// This middleware now validates the JWT AND checks the database for session revocation.
 func AuthMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        logrus.WithFields(logrus.Fields{
-            "method": r.Method,
-            "path":   r.URL.Path,
-            "ip":     r.RemoteAddr,
-        }).Debug("auth middleware processing request")
-        
-        authHeader := r.Header.Get("Authorization")
-        if authHeader == "" {
-            logrus.WithFields(logrus.Fields{
-                "method": r.Method,
-                "path":   r.URL.Path,
-                "ip":     r.RemoteAddr,
-            }).Warn("auth middleware: missing authorization header")
-            http.Error(w, "missing token", http.StatusUnauthorized)
-            return
-        }
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log := logrus.WithFields(logrus.Fields{
+			"method": r.Method,
+			"path":   r.URL.Path,
+			"ip":     r.RemoteAddr,
+		})
+		log.Debug("auth middleware processing request")
 
-        tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-        claims, err := ValidateToken(tokenStr)
-        if err != nil {
-            logrus.WithFields(logrus.Fields{
-                "method": r.Method,
-                "path":   r.URL.Path,
-                "ip":     r.RemoteAddr,
-                "error":  err,
-            }).Warn("auth middleware: token validation failed")
-            http.Error(w, "invalid token", http.StatusUnauthorized)
-            return
-        }
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "missing token", http.StatusUnauthorized)
+			return
+		}
 
-        logrus.WithFields(logrus.Fields{
-            "user_id": claims.UserID,
-            "method":  r.Method,
-            "path":    r.URL.Path,
-            "ip":      r.RemoteAddr,
-        }).Info("auth middleware: user authenticated successfully")
-        
-        ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-        next.ServeHTTP(w, r.WithContext(ctx))
-    })
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := ValidateToken(tokenStr)
+		if err != nil {
+			log.WithError(err).Warn("auth middleware: token validation failed")
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		client := db.NewClient()
+		if client == nil {
+			log.Error("auth middleware: database client is not initialized")
+			http.Error(w, "server configuration error", http.StatusInternalServerError)
+			return
+		}
+
+		s, err := client.Session.
+			Query().
+			Where(session.AccessTokenEQ(tokenStr)).
+			Only(r.Context())
+
+
+		if err != nil {
+			log.WithError(err).Warn("auth middleware: could not find session for token")
+			http.Error(w, "invalid session", http.StatusUnauthorized)
+			return
+		}
+
+		if s.RevokedAt != nil {
+			log.Warn("auth middleware: attempt to use a revoked session")
+			http.Error(w, "Please login again.", http.StatusUnauthorized)
+			return
+		}
+		log.WithField("user_id", claims.UserID).Info("auth middleware: user authenticated successfully")
+		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
-func GetUserID(ctx context.Context) (int, bool) {
-    userID, ok := ctx.Value(UserIDKey).(int)
-    return userID, ok
+func GetUserID(ctx context.Context) (uuid.UUID, bool) {
+	userID, ok := ctx.Value(UserIDKey).(uuid.UUID)
+	return userID, ok
 }

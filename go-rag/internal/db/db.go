@@ -8,7 +8,7 @@ import (
     _ "github.com/lib/pq"
     "github.com/sirupsen/logrus"
 
-    "go-rag/internal/ent"
+    "go-rag/ent/ent"
 )
 
 func NewClient() *ent.Client {

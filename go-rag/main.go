@@ -1,89 +1,102 @@
 package main
 
 import (
-    "fmt"
-    "net/http"
+	"fmt"
+	"net/http"
 
-    "github.com/go-chi/chi/v5"
-    "github.com/joho/godotenv"
-    "github.com/sirupsen/logrus"
+	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 
-    "go-rag/internal/auth"
-    "go-rag/internal/handlers"
-    "go-rag/internal/user"
-    "go-rag/internal/db"
+	"go-rag/internal/auth"
+	"go-rag/internal/db"
+	"go-rag/internal/handlers"
+	"go-rag/internal/user"
 )
 
 func main() {
-    // Configure logrus
-    logrus.SetFormatter(&logrus.JSONFormatter{})
-    logrus.SetLevel(logrus.InfoLevel)
-    
-    logrus.Info("starting server...")
 
-    // Load .env file
-    if err := godotenv.Load(); err != nil {
-        logrus.Warn("no .env file found, using system environment variables")
-    } else {
-        logrus.Info(".env file loaded successfully")
-    }
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.SetLevel(logrus.DebugLevel)
 
-    // Load JWT secret
-    auth.LoadSecret()
+	logrus.Info("starting server...")
 
-    // setup DB client
-    logrus.Debug("initializing database client")
-    client := db.NewClient()
-    defer func() {
-        logrus.Debug("closing database client")
-        if err := client.Close(); err != nil {
-            logrus.WithError(err).Error("error closing DB client")
-        } else {
-            logrus.Debug("DB client closed successfully")
-        }
-    }()
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		logrus.Warn("no .env file found, using system environment variables")
+	} else {
+		logrus.Info(".env file loaded successfully")
+	}
 
-    // setup services
-    logrus.Debug("initializing services")
-    userService := &user.Service{Client: client}
-    authHandler := &handlers.AuthHandler{UserService: userService}
-    logrus.Info("services initialized successfully")
+	// Load JWT secret
+	auth.LoadSecret()
 
-    // setup router
-    logrus.Debug("setting up HTTP router")
-    r := chi.NewRouter()
+	// setup DB client
+	logrus.Debug("initializing database client")
+	client := db.NewClient()
+	defer func() {
+		logrus.Debug("closing database client")
+		if err := client.Close(); err != nil {
+			logrus.WithError(err).Error("error closing DB client")
+		} else {
+			logrus.Debug("DB client closed successfully")
+		}
+	}()
 
-    // Public routes
-    r.Post("/signup", authHandler.Signup)
-    r.Post("/login", authHandler.Login)
-    logrus.Info("public routes registered", "routes", []string{"/signup", "/login"})
+	// setup services
+	logrus.Debug("initializing services")
+	// users
+	userService := &user.Service{Client: client}
+	authHandler := &handlers.AuthHandler{UserService: userService}
+	logrus.Info("services initialized successfully")
 
-    // Protected group
-    r.Group(func(protected chi.Router) {
-        protected.Use(auth.AuthMiddleware)
+	logrus.Debug("setting up HTTP router")
+	r := chi.NewRouter()
 
-        protected.Get("/me", func(w http.ResponseWriter, r *http.Request) {
-            userID, _ := auth.GetUserID(r.Context())
-            logrus.WithField("user_id", userID).Info("user accessed /me endpoint")
-            w.Header().Set("Content-Type", "application/json")
-            w.WriteHeader(http.StatusOK)
-            _, err := w.Write([]byte(fmt.Sprintf(`{"message":"Hello, user %d"}`, userID)))
-            if err != nil {
-                logrus.WithFields(logrus.Fields{
-                    "user_id": userID,
-                    "error": err,
-                }).Error("error writing response for user")
-            }
-        })
-        
-        // User deletion endpoint
-        protected.Delete("/user", authHandler.DeleteUser)
-    })
-    logrus.Info("protected routes registered", "routes", []string{"/me", "DELETE /user"})
+	// Public Routes
+	r.Post("/signup", authHandler.Signup)
+	r.Post("/login", authHandler.Login)
+	r.Post("/auth/refreshAccessToken", authHandler.RefreshToken)
+	logrus.Info("public routes registered", "routes", []string{"/signup", "/login", "/auth/refreshAccessToken"})
 
-    addr := ":8080"
-    logrus.WithField("address", addr).Info("server starting")
-    if err := http.ListenAndServe(addr, r); err != nil {
-        logrus.WithError(err).Fatal("server failed to start")
-    }
+	//Protected Routes
+	r.Group(func(protected chi.Router) {
+		protected.Use(auth.AuthMiddleware)
+		protected.Post("/logout", authHandler.Logout)
+		protected.Delete("/user", authHandler.DeleteUser)
+		protected.Get("/me", func(w http.ResponseWriter, r *http.Request) {
+			userID, ok := auth.GetUserID(r.Context())
+			if !ok {
+				http.Error(w, "Unauthorized: User ID not found in context", http.StatusUnauthorized)
+				return
+			}
+
+			user, err := userService.GetUserByID(r.Context(), userID)
+			if err != nil {
+				http.Error(w, "User not found", http.StatusNotFound)
+				return
+			}
+
+			logrus.WithField("user_id", userID).Info("user accessed /me endpoint")
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+
+			responseJSON := fmt.Sprintf(`{"message":"Hello, %s"}`, user.Email)
+
+			_, err = w.Write([]byte(responseJSON))
+			if err != nil {
+				logrus.WithFields(logrus.Fields{
+					"user_id": userID,
+					"error":   err,
+				}).Error("error writing response for /me endpoint")
+			}
+		})
+	})
+	logrus.Info("protected routes registered", "routes", []string{"/me", "/logout", "/user"})
+
+	addr := ":8080"
+	logrus.WithField("address", addr).Info("server starting")
+	if err := http.ListenAndServe(addr, r); err != nil {
+		logrus.WithError(err).Fatal("server failed to start")
+	}
 }

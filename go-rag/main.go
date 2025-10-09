@@ -22,7 +22,7 @@ func main() {
 	logrus.Info("starting server...")
 
 	// Load .env file
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load(".env.dev"); err != nil {
 		logrus.Warn("no .env file found, using system environment variables")
 	} else {
 		logrus.Info(".env file loaded successfully")
@@ -45,7 +45,6 @@ func main() {
 
 	// setup services
 	logrus.Debug("initializing services")
-	// users
 	userService := &user.Service{Client: client}
 	authHandler := &handlers.AuthHandler{UserService: userService}
 	logrus.Info("services initialized successfully")
@@ -53,17 +52,26 @@ func main() {
 	logrus.Debug("setting up HTTP router")
 	r := chi.NewRouter()
 
-	// Public Routes
+	// --- Public Routes ---
 	r.Post("/signup", authHandler.Signup)
 	r.Post("/login", authHandler.Login)
 	r.Post("/auth/refreshAccessToken", authHandler.RefreshToken)
-	logrus.Info("public routes registered", "routes", []string{"/signup", "/login", "/auth/refreshAccessToken"})
 
-	//Protected Routes
+	// Password Recovery Routes
+	r.Post("/auth/forgot-password/request", authHandler.ForgotPasswordRequest)
+	r.Post("/auth/forgot-password/reset", authHandler.ResetPassword)
+	logrus.Info("public routes registered")
+
+	// --- Protected Routes ---
 	r.Group(func(protected chi.Router) {
 		protected.Use(auth.AuthMiddleware)
+
 		protected.Post("/logout", authHandler.Logout)
 		protected.Delete("/user", authHandler.DeleteUser)
+
+		// New route for adding security questions
+		protected.Post("/user/security-questions", authHandler.AddSecurityQuestion)
+
 		protected.Get("/me", func(w http.ResponseWriter, r *http.Request) {
 			userID, ok := auth.GetUserID(r.Context())
 			if !ok {
@@ -92,7 +100,7 @@ func main() {
 			}
 		})
 	})
-	logrus.Info("protected routes registered", "routes", []string{"/me", "/logout", "/user"})
+	logrus.Info("protected routes registered")
 
 	addr := ":8080"
 	logrus.WithField("address", addr).Info("server starting")

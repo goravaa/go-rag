@@ -123,6 +123,29 @@ var (
 			},
 		},
 	}
+	// SecurityQuestionsColumns holds the columns for the "security_questions" table.
+	SecurityQuestionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "question", Type: field.TypeString},
+		{Name: "answer", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_security_questions", Type: field.TypeUUID},
+	}
+	// SecurityQuestionsTable holds the schema information for the "security_questions" table.
+	SecurityQuestionsTable = &schema.Table{
+		Name:       "security_questions",
+		Columns:    SecurityQuestionsColumns,
+		PrimaryKey: []*schema.Column{SecurityQuestionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "security_questions_users_security_questions",
+				Columns:    []*schema.Column{SecurityQuestionsColumns[5]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// SessionsColumns holds the columns for the "sessions" table.
 	SessionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -203,6 +226,7 @@ var (
 		EmbeddingsTable,
 		ProjectsTable,
 		QueryResultsTable,
+		SecurityQuestionsTable,
 		SessionsTable,
 		UsersTable,
 		UserPromptsTable,
@@ -216,6 +240,7 @@ func init() {
 	ProjectsTable.ForeignKeys[0].RefTable = UsersTable
 	QueryResultsTable.ForeignKeys[0].RefTable = DocumentsTable
 	QueryResultsTable.ForeignKeys[1].RefTable = UserPromptsTable
+	SecurityQuestionsTable.ForeignKeys[0].RefTable = UsersTable
 	SessionsTable.ForeignKeys[0].RefTable = UsersTable
 	UserPromptsTable.ForeignKeys[0].RefTable = ProjectsTable
 	UserPromptsTable.ForeignKeys[1].RefTable = UsersTable

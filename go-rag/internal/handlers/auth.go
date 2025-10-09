@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,6 +33,26 @@ type loginResponse struct {
 
 type refreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token"`
+}
+
+type addSecurityQuestionRequest struct {
+	Question string `json:"question"`
+	Answer   string `json:"answer"`
+}
+
+type forgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+type forgotPasswordResponse struct {
+	QuestionID string `json:"question_id"`
+	Question   string `json:"question"`
+}
+
+type resetPasswordRequest struct {
+	QuestionID  string `json:"question_id"`
+	Answer      string `json:"answer"`
+	NewPassword string `json:"new_password"`
 }
 
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
@@ -179,4 +200,95 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "logged out successfully"})
+}
+
+func (h *AuthHandler) AddSecurityQuestion(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req addSecurityQuestionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	serviceReq := user.AddSecurityQuestionRequest{
+		UserID:   userID,
+		Question: req.Question,
+		Answer:   req.Answer,
+	}
+
+	_, err := h.UserService.AddSecurityQuestion(r.Context(), serviceReq)
+	if err != nil {
+		http.Error(w, "failed to add security question", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "security question added successfully"})
+}
+
+func (h *AuthHandler) ForgotPasswordRequest(w http.ResponseWriter, r *http.Request) {
+	var req forgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	sq, err := h.UserService.GetRandomSecurityQuestionForUser(r.Context(), req.Email)
+	if err != nil {
+		if strings.Contains(err.Error(), "no security questions found for this user") {
+			http.Error(w, "You have not added any security questions for password recovery.", http.StatusBadRequest)
+		} else {
+			http.Error(w, "Could not process request. Please check the email and try again.", http.StatusNotFound)
+		}
+		return
+	}
+
+	response := forgotPasswordResponse{
+		QuestionID: sq.ID.String(),
+		Question:   sq.Question,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req resetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	qID, err := uuid.Parse(req.QuestionID)
+	if err != nil {
+		http.Error(w, "invalid question ID format", http.StatusBadRequest)
+		return
+	}
+
+	serviceReq := user.ResetPasswordWithSecurityQuestionRequest{
+		QuestionID:     qID,
+		ProvidedAnswer: req.Answer,
+		NewPassword:    req.NewPassword,
+	}
+
+	err = h.UserService.ResetPasswordWithSecurityQuestion(r.Context(), serviceReq)
+	if err != nil {
+		if strings.Contains(err.Error(), "invalid question or answer") {
+			http.Error(w, "Incorrect Answer.", http.StatusUnauthorized)
+		} else {
+			http.Error(w, "An internal error occurred.", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Password has been reset successfully. Please log in."})
 }

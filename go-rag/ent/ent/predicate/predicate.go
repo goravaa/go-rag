@@ -21,6 +21,9 @@ type Project func(*sql.Selector)
 // QueryResult is the predicate function for queryresult builders.
 type QueryResult func(*sql.Selector)
 
+// SecurityQuestion is the predicate function for securityquestion builders.
+type SecurityQuestion func(*sql.Selector)
+
 // Session is the predicate function for session builders.
 type Session func(*sql.Selector)
 

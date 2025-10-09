@@ -33,5 +33,6 @@ func (User) Edges() []ent.Edge {
 		edge.To("projects", Project.Type),
 		edge.To("queries", UserPrompt.Type),
 		edge.To("sessions", Session.Type),
+		edge.To("security_questions", SecurityQuestion.Type),
 	}
 }

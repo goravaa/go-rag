@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"go-rag/ent/ent/project"
+	"go-rag/ent/ent/securityquestion"
 	"go-rag/ent/ent/session"
 	"go-rag/ent/ent/user"
 	"go-rag/ent/ent/userprompt"
@@ -121,6 +122,21 @@ func (_c *UserCreate) AddSessions(v ...*Session) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddSessionIDs(ids...)
+}
+
+// AddSecurityQuestionIDs adds the "security_questions" edge to the SecurityQuestion entity by IDs.
+func (_c *UserCreate) AddSecurityQuestionIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddSecurityQuestionIDs(ids...)
+	return _c
+}
+
+// AddSecurityQuestions adds the "security_questions" edges to the SecurityQuestion entity.
+func (_c *UserCreate) AddSecurityQuestions(v ...*SecurityQuestion) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddSecurityQuestionIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -278,6 +294,22 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.SecurityQuestionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SecurityQuestionsTable,
+			Columns: []string{user.SecurityQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(securityquestion.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

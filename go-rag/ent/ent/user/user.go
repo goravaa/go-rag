@@ -29,6 +29,8 @@ const (
 	EdgeQueries = "queries"
 	// EdgeSessions holds the string denoting the sessions edge name in mutations.
 	EdgeSessions = "sessions"
+	// EdgeSecurityQuestions holds the string denoting the security_questions edge name in mutations.
+	EdgeSecurityQuestions = "security_questions"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// ProjectsTable is the table that holds the projects relation/edge.
@@ -52,6 +54,13 @@ const (
 	SessionsInverseTable = "sessions"
 	// SessionsColumn is the table column denoting the sessions relation/edge.
 	SessionsColumn = "sessions_userids"
+	// SecurityQuestionsTable is the table that holds the security_questions relation/edge.
+	SecurityQuestionsTable = "security_questions"
+	// SecurityQuestionsInverseTable is the table name for the SecurityQuestion entity.
+	// It exists in this package in order to avoid circular dependency with the "securityquestion" package.
+	SecurityQuestionsInverseTable = "security_questions"
+	// SecurityQuestionsColumn is the table column denoting the security_questions relation/edge.
+	SecurityQuestionsColumn = "user_security_questions"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -151,6 +160,20 @@ func BySessions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newSessionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// BySecurityQuestionsCount orders the results by security_questions count.
+func BySecurityQuestionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSecurityQuestionsStep(), opts...)
+	}
+}
+
+// BySecurityQuestions orders the results by security_questions terms.
+func BySecurityQuestions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSecurityQuestionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newProjectsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -170,5 +193,12 @@ func newSessionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(SessionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, SessionsTable, SessionsColumn),
+	)
+}
+func newSecurityQuestionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SecurityQuestionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SecurityQuestionsTable, SecurityQuestionsColumn),
 	)
 }

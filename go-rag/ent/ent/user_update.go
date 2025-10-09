@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"go-rag/ent/ent/predicate"
 	"go-rag/ent/ent/project"
+	"go-rag/ent/ent/securityquestion"
 	"go-rag/ent/ent/session"
 	"go-rag/ent/ent/user"
 	"go-rag/ent/ent/userprompt"
@@ -16,6 +17,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // UserUpdate is the builder for updating User entities.
@@ -132,6 +134,21 @@ func (_u *UserUpdate) AddSessions(v ...*Session) *UserUpdate {
 	return _u.AddSessionIDs(ids...)
 }
 
+// AddSecurityQuestionIDs adds the "security_questions" edge to the SecurityQuestion entity by IDs.
+func (_u *UserUpdate) AddSecurityQuestionIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddSecurityQuestionIDs(ids...)
+	return _u
+}
+
+// AddSecurityQuestions adds the "security_questions" edges to the SecurityQuestion entity.
+func (_u *UserUpdate) AddSecurityQuestions(v ...*SecurityQuestion) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddSecurityQuestionIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdate) Mutation() *UserMutation {
 	return _u.mutation
@@ -198,6 +215,27 @@ func (_u *UserUpdate) RemoveSessions(v ...*Session) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveSessionIDs(ids...)
+}
+
+// ClearSecurityQuestions clears all "security_questions" edges to the SecurityQuestion entity.
+func (_u *UserUpdate) ClearSecurityQuestions() *UserUpdate {
+	_u.mutation.ClearSecurityQuestions()
+	return _u
+}
+
+// RemoveSecurityQuestionIDs removes the "security_questions" edge to SecurityQuestion entities by IDs.
+func (_u *UserUpdate) RemoveSecurityQuestionIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveSecurityQuestionIDs(ids...)
+	return _u
+}
+
+// RemoveSecurityQuestions removes "security_questions" edges to SecurityQuestion entities.
+func (_u *UserUpdate) RemoveSecurityQuestions(v ...*SecurityQuestion) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSecurityQuestionIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -383,6 +421,51 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.SecurityQuestionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SecurityQuestionsTable,
+			Columns: []string{user.SecurityQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(securityquestion.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSecurityQuestionsIDs(); len(nodes) > 0 && !_u.mutation.SecurityQuestionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SecurityQuestionsTable,
+			Columns: []string{user.SecurityQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(securityquestion.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SecurityQuestionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SecurityQuestionsTable,
+			Columns: []string{user.SecurityQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(securityquestion.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -504,6 +587,21 @@ func (_u *UserUpdateOne) AddSessions(v ...*Session) *UserUpdateOne {
 	return _u.AddSessionIDs(ids...)
 }
 
+// AddSecurityQuestionIDs adds the "security_questions" edge to the SecurityQuestion entity by IDs.
+func (_u *UserUpdateOne) AddSecurityQuestionIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddSecurityQuestionIDs(ids...)
+	return _u
+}
+
+// AddSecurityQuestions adds the "security_questions" edges to the SecurityQuestion entity.
+func (_u *UserUpdateOne) AddSecurityQuestions(v ...*SecurityQuestion) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddSecurityQuestionIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdateOne) Mutation() *UserMutation {
 	return _u.mutation
@@ -570,6 +668,27 @@ func (_u *UserUpdateOne) RemoveSessions(v ...*Session) *UserUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveSessionIDs(ids...)
+}
+
+// ClearSecurityQuestions clears all "security_questions" edges to the SecurityQuestion entity.
+func (_u *UserUpdateOne) ClearSecurityQuestions() *UserUpdateOne {
+	_u.mutation.ClearSecurityQuestions()
+	return _u
+}
+
+// RemoveSecurityQuestionIDs removes the "security_questions" edge to SecurityQuestion entities by IDs.
+func (_u *UserUpdateOne) RemoveSecurityQuestionIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveSecurityQuestionIDs(ids...)
+	return _u
+}
+
+// RemoveSecurityQuestions removes "security_questions" edges to SecurityQuestion entities.
+func (_u *UserUpdateOne) RemoveSecurityQuestions(v ...*SecurityQuestion) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSecurityQuestionIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -778,6 +897,51 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.SecurityQuestionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SecurityQuestionsTable,
+			Columns: []string{user.SecurityQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(securityquestion.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSecurityQuestionsIDs(); len(nodes) > 0 && !_u.mutation.SecurityQuestionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SecurityQuestionsTable,
+			Columns: []string{user.SecurityQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(securityquestion.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SecurityQuestionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SecurityQuestionsTable,
+			Columns: []string{user.SecurityQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(securityquestion.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

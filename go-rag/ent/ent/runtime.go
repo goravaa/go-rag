@@ -5,6 +5,7 @@ package ent
 import (
 	"go-rag/ent/ent/document"
 	"go-rag/ent/ent/project"
+	"go-rag/ent/ent/securityquestion"
 	"go-rag/ent/ent/session"
 	"go-rag/ent/ent/user"
 	"go-rag/ent/ent/userprompt"
@@ -34,6 +35,30 @@ func init() {
 	projectDescCreatedAt := projectFields[2].Descriptor()
 	// project.DefaultCreatedAt holds the default value on creation for the created_at field.
 	project.DefaultCreatedAt = projectDescCreatedAt.Default.(func() time.Time)
+	securityquestionFields := schema.SecurityQuestion{}.Fields()
+	_ = securityquestionFields
+	// securityquestionDescQuestion is the schema descriptor for question field.
+	securityquestionDescQuestion := securityquestionFields[1].Descriptor()
+	// securityquestion.QuestionValidator is a validator for the "question" field. It is called by the builders before save.
+	securityquestion.QuestionValidator = securityquestionDescQuestion.Validators[0].(func(string) error)
+	// securityquestionDescAnswer is the schema descriptor for answer field.
+	securityquestionDescAnswer := securityquestionFields[2].Descriptor()
+	// securityquestion.AnswerValidator is a validator for the "answer" field. It is called by the builders before save.
+	securityquestion.AnswerValidator = securityquestionDescAnswer.Validators[0].(func(string) error)
+	// securityquestionDescCreatedAt is the schema descriptor for created_at field.
+	securityquestionDescCreatedAt := securityquestionFields[3].Descriptor()
+	// securityquestion.DefaultCreatedAt holds the default value on creation for the created_at field.
+	securityquestion.DefaultCreatedAt = securityquestionDescCreatedAt.Default.(func() time.Time)
+	// securityquestionDescUpdatedAt is the schema descriptor for updated_at field.
+	securityquestionDescUpdatedAt := securityquestionFields[4].Descriptor()
+	// securityquestion.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	securityquestion.DefaultUpdatedAt = securityquestionDescUpdatedAt.Default.(func() time.Time)
+	// securityquestion.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	securityquestion.UpdateDefaultUpdatedAt = securityquestionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// securityquestionDescID is the schema descriptor for id field.
+	securityquestionDescID := securityquestionFields[0].Descriptor()
+	// securityquestion.DefaultID holds the default value on creation for the id field.
+	securityquestion.DefaultID = securityquestionDescID.Default.(func() uuid.UUID)
 	sessionFields := schema.Session{}.Fields()
 	_ = sessionFields
 	// sessionDescCreatedAt is the schema descriptor for created_at field.

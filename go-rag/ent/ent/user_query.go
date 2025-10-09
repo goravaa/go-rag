@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"go-rag/ent/ent/predicate"
 	"go-rag/ent/ent/project"
+	"go-rag/ent/ent/securityquestion"
 	"go-rag/ent/ent/session"
 	"go-rag/ent/ent/user"
 	"go-rag/ent/ent/userprompt"
@@ -23,13 +24,14 @@ import (
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	ctx          *QueryContext
-	order        []user.OrderOption
-	inters       []Interceptor
-	predicates   []predicate.User
-	withProjects *ProjectQuery
-	withQueries  *UserPromptQuery
-	withSessions *SessionQuery
+	ctx                   *QueryContext
+	order                 []user.OrderOption
+	inters                []Interceptor
+	predicates            []predicate.User
+	withProjects          *ProjectQuery
+	withQueries           *UserPromptQuery
+	withSessions          *SessionQuery
+	withSecurityQuestions *SecurityQuestionQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -125,6 +127,28 @@ func (_q *UserQuery) QuerySessions() *SessionQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(session.Table, session.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.SessionsTable, user.SessionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QuerySecurityQuestions chains the current query on the "security_questions" edge.
+func (_q *UserQuery) QuerySecurityQuestions() *SecurityQuestionQuery {
+	query := (&SecurityQuestionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(securityquestion.Table, securityquestion.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.SecurityQuestionsTable, user.SecurityQuestionsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -319,14 +343,15 @@ func (_q *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:       _q.config,
-		ctx:          _q.ctx.Clone(),
-		order:        append([]user.OrderOption{}, _q.order...),
-		inters:       append([]Interceptor{}, _q.inters...),
-		predicates:   append([]predicate.User{}, _q.predicates...),
-		withProjects: _q.withProjects.Clone(),
-		withQueries:  _q.withQueries.Clone(),
-		withSessions: _q.withSessions.Clone(),
+		config:                _q.config,
+		ctx:                   _q.ctx.Clone(),
+		order:                 append([]user.OrderOption{}, _q.order...),
+		inters:                append([]Interceptor{}, _q.inters...),
+		predicates:            append([]predicate.User{}, _q.predicates...),
+		withProjects:          _q.withProjects.Clone(),
+		withQueries:           _q.withQueries.Clone(),
+		withSessions:          _q.withSessions.Clone(),
+		withSecurityQuestions: _q.withSecurityQuestions.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -363,6 +388,17 @@ func (_q *UserQuery) WithSessions(opts ...func(*SessionQuery)) *UserQuery {
 		opt(query)
 	}
 	_q.withSessions = query
+	return _q
+}
+
+// WithSecurityQuestions tells the query-builder to eager-load the nodes that are connected to
+// the "security_questions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithSecurityQuestions(opts ...func(*SecurityQuestionQuery)) *UserQuery {
+	query := (&SecurityQuestionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withSecurityQuestions = query
 	return _q
 }
 
@@ -444,10 +480,11 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withProjects != nil,
 			_q.withQueries != nil,
 			_q.withSessions != nil,
+			_q.withSecurityQuestions != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -486,6 +523,13 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadSessions(ctx, query, nodes,
 			func(n *User) { n.Edges.Sessions = []*Session{} },
 			func(n *User, e *Session) { n.Edges.Sessions = append(n.Edges.Sessions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withSecurityQuestions; query != nil {
+		if err := _q.loadSecurityQuestions(ctx, query, nodes,
+			func(n *User) { n.Edges.SecurityQuestions = []*SecurityQuestion{} },
+			func(n *User, e *SecurityQuestion) { n.Edges.SecurityQuestions = append(n.Edges.SecurityQuestions, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -579,6 +623,37 @@ func (_q *UserQuery) loadSessions(ctx context.Context, query *SessionQuery, node
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "sessions_userids" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadSecurityQuestions(ctx context.Context, query *SecurityQuestionQuery, nodes []*User, init func(*User), assign func(*User, *SecurityQuestion)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.SecurityQuestion(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.SecurityQuestionsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_security_questions
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_security_questions" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_security_questions" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

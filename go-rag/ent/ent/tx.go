@@ -22,6 +22,8 @@ type Tx struct {
 	Project *ProjectClient
 	// QueryResult is the client for interacting with the QueryResult builders.
 	QueryResult *QueryResultClient
+	// SecurityQuestion is the client for interacting with the SecurityQuestion builders.
+	SecurityQuestion *SecurityQuestionClient
 	// Session is the client for interacting with the Session builders.
 	Session *SessionClient
 	// User is the client for interacting with the User builders.
@@ -164,6 +166,7 @@ func (tx *Tx) init() {
 	tx.Embedding = NewEmbeddingClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
 	tx.QueryResult = NewQueryResultClient(tx.config)
+	tx.SecurityQuestion = NewSecurityQuestionClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 	tx.UserPrompt = NewUserPromptClient(tx.config)

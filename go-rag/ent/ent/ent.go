@@ -11,6 +11,7 @@ import (
 	"go-rag/ent/ent/embedding"
 	"go-rag/ent/ent/project"
 	"go-rag/ent/ent/queryresult"
+	"go-rag/ent/ent/securityquestion"
 	"go-rag/ent/ent/session"
 	"go-rag/ent/ent/user"
 	"go-rag/ent/ent/userprompt"
@@ -80,14 +81,15 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			chunk.Table:       chunk.ValidColumn,
-			document.Table:    document.ValidColumn,
-			embedding.Table:   embedding.ValidColumn,
-			project.Table:     project.ValidColumn,
-			queryresult.Table: queryresult.ValidColumn,
-			session.Table:     session.ValidColumn,
-			user.Table:        user.ValidColumn,
-			userprompt.Table:  userprompt.ValidColumn,
+			chunk.Table:            chunk.ValidColumn,
+			document.Table:         document.ValidColumn,
+			embedding.Table:        embedding.ValidColumn,
+			project.Table:          project.ValidColumn,
+			queryresult.Table:      queryresult.ValidColumn,
+			securityquestion.Table: securityquestion.ValidColumn,
+			session.Table:          session.ValidColumn,
+			user.Table:             user.ValidColumn,
+			userprompt.Table:       userprompt.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

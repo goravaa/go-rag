@@ -68,6 +68,18 @@ func (f QueryResultFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.QueryResultMutation", m)
 }
 
+// The SecurityQuestionFunc type is an adapter to allow the use of ordinary
+// function as SecurityQuestion mutator.
+type SecurityQuestionFunc func(context.Context, *ent.SecurityQuestionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SecurityQuestionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SecurityQuestionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SecurityQuestionMutation", m)
+}
+
 // The SessionFunc type is an adapter to allow the use of ordinary
 // function as Session mutator.
 type SessionFunc func(context.Context, *ent.SessionMutation) (ent.Value, error)

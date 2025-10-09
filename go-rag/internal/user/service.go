@@ -2,16 +2,20 @@ package user
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
-	"go-rag/internal/auth"
-	"go-rag/ent/ent"      
-	"go-rag/ent/ent/user" 
+	"go-rag/ent/ent"
+	"go-rag/ent/ent/securityquestion"
 	"go-rag/ent/ent/session"
+	"go-rag/ent/ent/user"
+	"go-rag/internal/auth"
+	"math/big"
 	"net/mail"
 	"time"
+
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"github.com/google/uuid"
 )
 
 type Service struct {
@@ -25,6 +29,17 @@ type LoginRequest struct {
 	UserAgent string
 }
 
+type AddSecurityQuestionRequest struct {
+	UserID   uuid.UUID
+	Question string
+	Answer   string
+}
+
+type ResetPasswordWithSecurityQuestionRequest struct {
+	QuestionID     uuid.UUID
+	ProvidedAnswer string
+	NewPassword    string
+}
 
 func (s *Service) LoginUser(ctx context.Context, req LoginRequest) (*ent.Session, error) {
 	log := logrus.WithField("email", req.Email)
@@ -79,12 +94,10 @@ func (s *Service) LoginUser(ctx context.Context, req LoginRequest) (*ent.Session
 	return session, nil
 }
 
-
 func isValidEmail(e string) bool {
 	_, err := mail.ParseAddress(e)
 	return err == nil
 }
-
 
 func (s *Service) CreateUser(ctx context.Context, email, password string) (*ent.User, error) {
 	logrus.WithField("email", email).Debug("creating new user")
@@ -136,7 +149,6 @@ func (s *Service) CreateUser(ctx context.Context, email, password string) (*ent.
 	return u, nil
 }
 
-
 func (s *Service) GetUserByEmail(ctx context.Context, email string) (*ent.User, error) {
 	logrus.WithField("email", email).Debug("looking up user by email")
 
@@ -160,7 +172,6 @@ func (s *Service) GetUserByEmail(ctx context.Context, email string) (*ent.User, 
 	}).Debug("getUserByEmail: user found")
 	return u, nil
 }
-
 
 func (s *Service) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	logrus.WithField("user_id", userID).Debug("deleting user")
@@ -224,18 +235,16 @@ func (s *Service) RefreshSession(ctx context.Context, oldRefreshToken string) (*
 	return updatedSession, nil
 }
 
-
 func (s *Service) LogoutUser(ctx context.Context, accessToken string) error {
 	log := logrus.WithField("access_token", accessToken)
 	log.Debug("attempting to log out user by revoking session")
-
 
 	session, err := s.Client.Session.
 		Query().
 		Where(session.AccessTokenEQ(accessToken)).
 		Only(ctx)
 	if err != nil {
-		
+
 		log.WithError(err).Warn("logout: could not find session for access token")
 		return nil
 	}
@@ -255,7 +264,7 @@ func (s *Service) LogoutUser(ctx context.Context, accessToken string) error {
 func (s *Service) GetUserByID(ctx context.Context, userID uuid.UUID) (*ent.User, error) {
 	logrus.WithField("user_id", userID).Debug("looking up user by id")
 
-	u, err := s.Client.User.Get(ctx, userID) 
+	u, err := s.Client.User.Get(ctx, userID)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			logrus.WithField("user_id", userID).Warn("getUserByID: user not found")
@@ -270,4 +279,111 @@ func (s *Service) GetUserByID(ctx context.Context, userID uuid.UUID) (*ent.User,
 
 	logrus.WithField("user_id", userID).Debug("getUserByID: user found")
 	return u, nil
+}
+
+func (s *Service) AddSecurityQuestion(ctx context.Context, req AddSecurityQuestionRequest) (*ent.SecurityQuestion, error) {
+	log := logrus.WithFields(logrus.Fields{
+		"user_id":  req.UserID,
+		"question": req.Question,
+	})
+	log.Debug("adding security question")
+
+	u, err := s.GetUserByID(ctx, req.UserID)
+	if err != nil {
+		log.WithError(err).Warn("addSecurityQuestion: user not found")
+		return nil, err
+	}
+
+	hashedAnswer, err := bcrypt.GenerateFromPassword([]byte(req.Answer), bcrypt.DefaultCost)
+	if err != nil {
+		log.WithError(err).Error("addSecurityQuestion: failed to hash answer")
+		return nil, fmt.Errorf("could not process security question: %w", err)
+	}
+
+	sq, err := s.Client.SecurityQuestion.
+		Create().
+		SetQuestion(req.Question).
+		SetAnswer(string(hashedAnswer)).
+		SetUser(u).
+		Save(ctx)
+
+	if err != nil {
+		log.WithError(err).Error("addSecurityQuestion: failed to save security question to database")
+		return nil, fmt.Errorf("could not save security question: %w", err)
+	}
+
+	log.WithField("sq_id", sq.ID).Info("security question added successfully")
+	return sq, nil
+}
+
+func (s *Service) GetRandomSecurityQuestionForUser(ctx context.Context, email string) (*ent.SecurityQuestion, error) {
+	log := logrus.WithField("email", email)
+	log.Debug("getting random security question for user")
+
+	u, err := s.GetUserByEmail(ctx, email)
+	if err != nil {
+		log.WithError(err).Warn("getRandomSecurityQuestion: user not found")
+		return nil, fmt.Errorf("could not retrieve security question")
+	}
+
+	questions, err := u.QuerySecurityQuestions().All(ctx)
+	if err != nil {
+		log.WithError(err).Error("getRandomSecurityQuestion: failed to query security questions")
+		return nil, fmt.Errorf("could not retrieve security question")
+	}
+
+	if len(questions) == 0 {
+		log.Warn("getRandomSecurityQuestion: user has no security questions set up")
+		return nil, fmt.Errorf("no security questions found for this user")
+	}
+
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(questions))))
+	if err != nil {
+		log.WithError(err).Error("getRandomSecurityQuestion: failed to generate random index")
+		return nil, fmt.Errorf("could not retrieve security question")
+	}
+	randomQuestion := questions[int(n.Int64())]
+	randomQuestion.Answer = ""
+
+	log.WithField("question_id", randomQuestion.ID).Info("random security question selected")
+	return randomQuestion, nil
+}
+
+func (s *Service) ResetPasswordWithSecurityQuestion(ctx context.Context, req ResetPasswordWithSecurityQuestionRequest) error {
+	log := logrus.WithField("question_id", req.QuestionID)
+	log.Debug("attempting to reset password with security question")
+
+	sq, err := s.Client.SecurityQuestion.
+		Query().
+		Where(securityquestion.ID(req.QuestionID)).
+		WithUser().
+		Only(ctx)
+	if err != nil {
+		log.WithError(err).Warn("resetPassword: could not find security question")
+		return fmt.Errorf("invalid question or answer")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(sq.Answer), []byte(req.ProvidedAnswer))
+	if err != nil {
+		log.Warn("resetPassword: incorrect answer provided")
+		return fmt.Errorf("invalid question or answer")
+	}
+
+	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.WithError(err).Error("resetPassword: failed to hash new password")
+		return fmt.Errorf("could not process password reset")
+	}
+
+	user := sq.Edges.User
+	_, err = user.Update().
+		SetPasswordHash(string(newHashedPassword)).
+		Save(ctx)
+	if err != nil {
+		log.WithError(err).WithField("user_id", user.ID).Error("resetPassword: failed to update user password in db")
+		return fmt.Errorf("could not process password reset")
+	}
+
+	log.WithField("user_id", user.ID).Info("password has been reset successfully via security question")
+	return nil
 }

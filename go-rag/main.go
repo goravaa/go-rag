@@ -11,6 +11,7 @@ import (
 	"go-rag/internal/auth"
 	"go-rag/internal/db"
 	"go-rag/internal/handlers"
+	"go-rag/internal/projects" // Import the new projects package
 	"go-rag/internal/user"
 )
 
@@ -46,7 +47,9 @@ func main() {
 	// setup services
 	logrus.Debug("initializing services")
 	userService := &user.Service{Client: client}
+	projectService := &projects.Service{Client: client} // Initialize Project Service
 	authHandler := &handlers.AuthHandler{UserService: userService}
+	projectHandler := &handlers.ProjectHandler{ProjectService: projectService} // Initialize Project Handler
 	logrus.Info("services initialized successfully")
 
 	logrus.Debug("setting up HTTP router")
@@ -66,11 +69,19 @@ func main() {
 	r.Group(func(protected chi.Router) {
 		protected.Use(auth.AuthMiddleware)
 
+		// User and Auth Routes
 		protected.Post("/logout", authHandler.Logout)
 		protected.Delete("/user", authHandler.DeleteUser)
-
-		// New route for adding security questions
 		protected.Post("/user/security-questions", authHandler.AddSecurityQuestion)
+
+		// Project CRUD Routes
+		protected.Route("/projects", func(r chi.Router) {
+			r.Post("/", projectHandler.CreateProject)              // POST /projects
+			r.Get("/", projectHandler.ListProjects)                // GET /projects
+			r.Get("/{projectID}", projectHandler.GetProject)       // GET /projects/123
+			r.Put("/{projectID}", projectHandler.UpdateProject)    // PUT /projects/123
+			r.Delete("/{projectID}", projectHandler.DeleteProject) // DELETE /projects/123
+		})
 
 		protected.Get("/me", func(w http.ResponseWriter, r *http.Request) {
 			userID, ok := auth.GetUserID(r.Context())

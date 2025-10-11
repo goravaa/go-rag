@@ -1,11 +1,11 @@
 package projects
-package projects
 
 import (
 	"context"
 	"fmt"
 	"go-rag/ent/ent"
 	"go-rag/ent/ent/project"
+	"go-rag/ent/ent/user"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -159,7 +159,7 @@ func (s *Service) DeleteProject(ctx context.Context, projectID int, ownerID uuid
 	}
 	if n == 0 {
 		log.Warn("service: project not found or access denied for deletion")
-		return ent.NewNotFoundError("project not found or access denied")
+		return fmt.Errorf("project not found or access denied")
 	}
 
 	log.Info("service: project deleted successfully")

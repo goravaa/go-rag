@@ -7,6 +7,7 @@ import (
 	"go-rag/ent/ent/document"
 	"go-rag/ent/ent/project"
 	"go-rag/ent/ent/user"
+	"go-rag/services/embed"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -14,7 +15,8 @@ import (
 
 // Service handles the business logic for documents.
 type Service struct {
-	Client *ent.Client
+	Client       *ent.Client
+	EmbedService *embed.Service
 }
 
 // CreateDocumentRequest defines the parameters for creating a new document.
@@ -35,7 +37,6 @@ type UpdateDocumentRequest struct {
 }
 
 // CreateDocument creates a new document and associates it with a project.
-// It first verifies that the user owns the project before creating the document.
 func (s *Service) CreateDocument(ctx context.Context, req CreateDocumentRequest) (*ent.Document, error) {
 	log := logrus.WithFields(logrus.Fields{
 		"project_id":    req.ProjectID,
@@ -73,6 +74,8 @@ func (s *Service) CreateDocument(ctx context.Context, req CreateDocumentRequest)
 		log.WithError(err).Error("service: failed to save document to database")
 		return nil, fmt.Errorf("could not create document: %w", err)
 	}
+
+	go s.EmbedService.ProcessDocument(context.Background(), doc.ID)
 
 	log.WithField("document_id", doc.ID).Info("service: document created successfully")
 	return doc, nil
@@ -169,6 +172,9 @@ func (s *Service) UpdateDocument(ctx context.Context, req UpdateDocumentRequest)
 		return nil, err
 	}
 
+	if req.Content != nil {
+		go s.EmbedService.ProcessDocument(context.Background(), updatedDoc.ID)
+	}
 	log.Info("service: document updated successfully")
 	return updatedDoc, nil
 }

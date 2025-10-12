@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package inference;
+
+option go_package = "github.com/garv/go-rag/services/proto;proto";
+
+// Request message for embeddings
+message EmbeddingRequest {
+  string text = 1;            
+}
+
+// Response message for embeddings
+message EmbeddingResponse {
+  repeated float embedding = 1; 
+}
+
+// gRPC service
+service Inferencer {
+  rpc GetEmbedding (EmbeddingRequest) returns (EmbeddingResponse);
+}

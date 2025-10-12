@@ -14,6 +14,7 @@ import (
 	"go-rag/internal/handlers"
 	"go-rag/internal/projects"
 	"go-rag/internal/user"
+	"go-rag/services/embed"
 )
 
 func main() {
@@ -45,14 +46,24 @@ func main() {
 		}
 	}()
 
+	inferenceClient, conn, err := embed.NewClient()
+	if err != nil {
+		logrus.WithError(err).Fatal("could not create inference client")
+	}
+	defer conn.Close() // Make sure to close the connection when the app exits
+
+	if err := embed.TestEmbeddingCall(inferenceClient, "health_check"); err != nil {
+		logrus.WithError(err).Fatal("embedding service health check failed")
+	}
 	// setup services
 	logrus.Debug("initializing services")
 	userService := &user.Service{Client: client}
 	projectService := &projects.Service{Client: client}
-	documentService := &documents.Service{Client: client} // Initialize Document Service
+	embedService := &embed.Service{Client: client, InferenceClient: inferenceClient}
+	documentService := &documents.Service{Client: client, EmbedService: embedService}
 	authHandler := &handlers.AuthHandler{UserService: userService}
 	projectHandler := &handlers.ProjectHandler{ProjectService: projectService}
-	documentHandler := &handlers.DocumentHandler{DocumentService: documentService} // Initialize Document Handler
+	documentHandler := &handlers.DocumentHandler{DocumentService: documentService}
 	logrus.Info("services initialized successfully")
 
 	logrus.Debug("setting up HTTP router")

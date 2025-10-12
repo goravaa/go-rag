@@ -22,11 +22,11 @@ func init() {
 	documentFields := schema.Document{}.Fields()
 	_ = documentFields
 	// documentDescStatus is the schema descriptor for status field.
-	documentDescStatus := documentFields[2].Descriptor()
+	documentDescStatus := documentFields[3].Descriptor()
 	// document.DefaultStatus holds the default value on creation for the status field.
 	document.DefaultStatus = documentDescStatus.Default.(string)
 	// documentDescCreatedAt is the schema descriptor for created_at field.
-	documentDescCreatedAt := documentFields[3].Descriptor()
+	documentDescCreatedAt := documentFields[4].Descriptor()
 	// document.DefaultCreatedAt holds the default value on creation for the created_at field.
 	document.DefaultCreatedAt = documentDescCreatedAt.Default.(func() time.Time)
 	projectFields := schema.Project{}.Fields()

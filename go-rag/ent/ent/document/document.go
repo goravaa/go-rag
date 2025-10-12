@@ -16,8 +16,10 @@ const (
 	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
-	// FieldStoragePath holds the string denoting the storage_path field in the database.
-	FieldStoragePath = "storage_path"
+	// FieldContent holds the string denoting the content field in the database.
+	FieldContent = "content"
+	// FieldContentHash holds the string denoting the content_hash field in the database.
+	FieldContentHash = "content_hash"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -57,7 +59,8 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldName,
-	FieldStoragePath,
+	FieldContent,
+	FieldContentHash,
 	FieldStatus,
 	FieldCreatedAt,
 }
@@ -103,9 +106,14 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
 }
 
-// ByStoragePath orders the results by the storage_path field.
-func ByStoragePath(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldStoragePath, opts...).ToFunc()
+// ByContent orders the results by the content field.
+func ByContent(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldContent, opts...).ToFunc()
+}
+
+// ByContentHash orders the results by the content_hash field.
+func ByContentHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldContentHash, opts...).ToFunc()
 }
 
 // ByStatus orders the results by the status field.

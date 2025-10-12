@@ -60,9 +60,14 @@ func Name(v string) predicate.Document {
 	return predicate.Document(sql.FieldEQ(FieldName, v))
 }
 
-// StoragePath applies equality check predicate on the "storage_path" field. It's identical to StoragePathEQ.
-func StoragePath(v string) predicate.Document {
-	return predicate.Document(sql.FieldEQ(FieldStoragePath, v))
+// Content applies equality check predicate on the "content" field. It's identical to ContentEQ.
+func Content(v string) predicate.Document {
+	return predicate.Document(sql.FieldEQ(FieldContent, v))
+}
+
+// ContentHash applies equality check predicate on the "content_hash" field. It's identical to ContentHashEQ.
+func ContentHash(v string) predicate.Document {
+	return predicate.Document(sql.FieldEQ(FieldContentHash, v))
 }
 
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
@@ -140,69 +145,144 @@ func NameContainsFold(v string) predicate.Document {
 	return predicate.Document(sql.FieldContainsFold(FieldName, v))
 }
 
-// StoragePathEQ applies the EQ predicate on the "storage_path" field.
-func StoragePathEQ(v string) predicate.Document {
-	return predicate.Document(sql.FieldEQ(FieldStoragePath, v))
+// ContentEQ applies the EQ predicate on the "content" field.
+func ContentEQ(v string) predicate.Document {
+	return predicate.Document(sql.FieldEQ(FieldContent, v))
 }
 
-// StoragePathNEQ applies the NEQ predicate on the "storage_path" field.
-func StoragePathNEQ(v string) predicate.Document {
-	return predicate.Document(sql.FieldNEQ(FieldStoragePath, v))
+// ContentNEQ applies the NEQ predicate on the "content" field.
+func ContentNEQ(v string) predicate.Document {
+	return predicate.Document(sql.FieldNEQ(FieldContent, v))
 }
 
-// StoragePathIn applies the In predicate on the "storage_path" field.
-func StoragePathIn(vs ...string) predicate.Document {
-	return predicate.Document(sql.FieldIn(FieldStoragePath, vs...))
+// ContentIn applies the In predicate on the "content" field.
+func ContentIn(vs ...string) predicate.Document {
+	return predicate.Document(sql.FieldIn(FieldContent, vs...))
 }
 
-// StoragePathNotIn applies the NotIn predicate on the "storage_path" field.
-func StoragePathNotIn(vs ...string) predicate.Document {
-	return predicate.Document(sql.FieldNotIn(FieldStoragePath, vs...))
+// ContentNotIn applies the NotIn predicate on the "content" field.
+func ContentNotIn(vs ...string) predicate.Document {
+	return predicate.Document(sql.FieldNotIn(FieldContent, vs...))
 }
 
-// StoragePathGT applies the GT predicate on the "storage_path" field.
-func StoragePathGT(v string) predicate.Document {
-	return predicate.Document(sql.FieldGT(FieldStoragePath, v))
+// ContentGT applies the GT predicate on the "content" field.
+func ContentGT(v string) predicate.Document {
+	return predicate.Document(sql.FieldGT(FieldContent, v))
 }
 
-// StoragePathGTE applies the GTE predicate on the "storage_path" field.
-func StoragePathGTE(v string) predicate.Document {
-	return predicate.Document(sql.FieldGTE(FieldStoragePath, v))
+// ContentGTE applies the GTE predicate on the "content" field.
+func ContentGTE(v string) predicate.Document {
+	return predicate.Document(sql.FieldGTE(FieldContent, v))
 }
 
-// StoragePathLT applies the LT predicate on the "storage_path" field.
-func StoragePathLT(v string) predicate.Document {
-	return predicate.Document(sql.FieldLT(FieldStoragePath, v))
+// ContentLT applies the LT predicate on the "content" field.
+func ContentLT(v string) predicate.Document {
+	return predicate.Document(sql.FieldLT(FieldContent, v))
 }
 
-// StoragePathLTE applies the LTE predicate on the "storage_path" field.
-func StoragePathLTE(v string) predicate.Document {
-	return predicate.Document(sql.FieldLTE(FieldStoragePath, v))
+// ContentLTE applies the LTE predicate on the "content" field.
+func ContentLTE(v string) predicate.Document {
+	return predicate.Document(sql.FieldLTE(FieldContent, v))
 }
 
-// StoragePathContains applies the Contains predicate on the "storage_path" field.
-func StoragePathContains(v string) predicate.Document {
-	return predicate.Document(sql.FieldContains(FieldStoragePath, v))
+// ContentContains applies the Contains predicate on the "content" field.
+func ContentContains(v string) predicate.Document {
+	return predicate.Document(sql.FieldContains(FieldContent, v))
 }
 
-// StoragePathHasPrefix applies the HasPrefix predicate on the "storage_path" field.
-func StoragePathHasPrefix(v string) predicate.Document {
-	return predicate.Document(sql.FieldHasPrefix(FieldStoragePath, v))
+// ContentHasPrefix applies the HasPrefix predicate on the "content" field.
+func ContentHasPrefix(v string) predicate.Document {
+	return predicate.Document(sql.FieldHasPrefix(FieldContent, v))
 }
 
-// StoragePathHasSuffix applies the HasSuffix predicate on the "storage_path" field.
-func StoragePathHasSuffix(v string) predicate.Document {
-	return predicate.Document(sql.FieldHasSuffix(FieldStoragePath, v))
+// ContentHasSuffix applies the HasSuffix predicate on the "content" field.
+func ContentHasSuffix(v string) predicate.Document {
+	return predicate.Document(sql.FieldHasSuffix(FieldContent, v))
 }
 
-// StoragePathEqualFold applies the EqualFold predicate on the "storage_path" field.
-func StoragePathEqualFold(v string) predicate.Document {
-	return predicate.Document(sql.FieldEqualFold(FieldStoragePath, v))
+// ContentEqualFold applies the EqualFold predicate on the "content" field.
+func ContentEqualFold(v string) predicate.Document {
+	return predicate.Document(sql.FieldEqualFold(FieldContent, v))
 }
 
-// StoragePathContainsFold applies the ContainsFold predicate on the "storage_path" field.
-func StoragePathContainsFold(v string) predicate.Document {
-	return predicate.Document(sql.FieldContainsFold(FieldStoragePath, v))
+// ContentContainsFold applies the ContainsFold predicate on the "content" field.
+func ContentContainsFold(v string) predicate.Document {
+	return predicate.Document(sql.FieldContainsFold(FieldContent, v))
+}
+
+// ContentHashEQ applies the EQ predicate on the "content_hash" field.
+func ContentHashEQ(v string) predicate.Document {
+	return predicate.Document(sql.FieldEQ(FieldContentHash, v))
+}
+
+// ContentHashNEQ applies the NEQ predicate on the "content_hash" field.
+func ContentHashNEQ(v string) predicate.Document {
+	return predicate.Document(sql.FieldNEQ(FieldContentHash, v))
+}
+
+// ContentHashIn applies the In predicate on the "content_hash" field.
+func ContentHashIn(vs ...string) predicate.Document {
+	return predicate.Document(sql.FieldIn(FieldContentHash, vs...))
+}
+
+// ContentHashNotIn applies the NotIn predicate on the "content_hash" field.
+func ContentHashNotIn(vs ...string) predicate.Document {
+	return predicate.Document(sql.FieldNotIn(FieldContentHash, vs...))
+}
+
+// ContentHashGT applies the GT predicate on the "content_hash" field.
+func ContentHashGT(v string) predicate.Document {
+	return predicate.Document(sql.FieldGT(FieldContentHash, v))
+}
+
+// ContentHashGTE applies the GTE predicate on the "content_hash" field.
+func ContentHashGTE(v string) predicate.Document {
+	return predicate.Document(sql.FieldGTE(FieldContentHash, v))
+}
+
+// ContentHashLT applies the LT predicate on the "content_hash" field.
+func ContentHashLT(v string) predicate.Document {
+	return predicate.Document(sql.FieldLT(FieldContentHash, v))
+}
+
+// ContentHashLTE applies the LTE predicate on the "content_hash" field.
+func ContentHashLTE(v string) predicate.Document {
+	return predicate.Document(sql.FieldLTE(FieldContentHash, v))
+}
+
+// ContentHashContains applies the Contains predicate on the "content_hash" field.
+func ContentHashContains(v string) predicate.Document {
+	return predicate.Document(sql.FieldContains(FieldContentHash, v))
+}
+
+// ContentHashHasPrefix applies the HasPrefix predicate on the "content_hash" field.
+func ContentHashHasPrefix(v string) predicate.Document {
+	return predicate.Document(sql.FieldHasPrefix(FieldContentHash, v))
+}
+
+// ContentHashHasSuffix applies the HasSuffix predicate on the "content_hash" field.
+func ContentHashHasSuffix(v string) predicate.Document {
+	return predicate.Document(sql.FieldHasSuffix(FieldContentHash, v))
+}
+
+// ContentHashIsNil applies the IsNil predicate on the "content_hash" field.
+func ContentHashIsNil() predicate.Document {
+	return predicate.Document(sql.FieldIsNull(FieldContentHash))
+}
+
+// ContentHashNotNil applies the NotNil predicate on the "content_hash" field.
+func ContentHashNotNil() predicate.Document {
+	return predicate.Document(sql.FieldNotNull(FieldContentHash))
+}
+
+// ContentHashEqualFold applies the EqualFold predicate on the "content_hash" field.
+func ContentHashEqualFold(v string) predicate.Document {
+	return predicate.Document(sql.FieldEqualFold(FieldContentHash, v))
+}
+
+// ContentHashContainsFold applies the ContainsFold predicate on the "content_hash" field.
+func ContentHashContainsFold(v string) predicate.Document {
+	return predicate.Document(sql.FieldContainsFold(FieldContentHash, v))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.

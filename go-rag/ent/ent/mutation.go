@@ -619,7 +619,8 @@ type DocumentMutation struct {
 	typ                  string
 	id                   *int
 	name                 *string
-	storage_path         *string
+	content              *string
+	content_hash         *string
 	status               *string
 	created_at           *time.Time
 	clearedFields        map[string]struct{}
@@ -770,40 +771,89 @@ func (m *DocumentMutation) ResetName() {
 	m.name = nil
 }
 
-// SetStoragePath sets the "storage_path" field.
-func (m *DocumentMutation) SetStoragePath(s string) {
-	m.storage_path = &s
+// SetContent sets the "content" field.
+func (m *DocumentMutation) SetContent(s string) {
+	m.content = &s
 }
 
-// StoragePath returns the value of the "storage_path" field in the mutation.
-func (m *DocumentMutation) StoragePath() (r string, exists bool) {
-	v := m.storage_path
+// Content returns the value of the "content" field in the mutation.
+func (m *DocumentMutation) Content() (r string, exists bool) {
+	v := m.content
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldStoragePath returns the old "storage_path" field's value of the Document entity.
+// OldContent returns the old "content" field's value of the Document entity.
 // If the Document object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DocumentMutation) OldStoragePath(ctx context.Context) (v string, err error) {
+func (m *DocumentMutation) OldContent(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStoragePath is only allowed on UpdateOne operations")
+		return v, errors.New("OldContent is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStoragePath requires an ID field in the mutation")
+		return v, errors.New("OldContent requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStoragePath: %w", err)
+		return v, fmt.Errorf("querying old value for OldContent: %w", err)
 	}
-	return oldValue.StoragePath, nil
+	return oldValue.Content, nil
 }
 
-// ResetStoragePath resets all changes to the "storage_path" field.
-func (m *DocumentMutation) ResetStoragePath() {
-	m.storage_path = nil
+// ResetContent resets all changes to the "content" field.
+func (m *DocumentMutation) ResetContent() {
+	m.content = nil
+}
+
+// SetContentHash sets the "content_hash" field.
+func (m *DocumentMutation) SetContentHash(s string) {
+	m.content_hash = &s
+}
+
+// ContentHash returns the value of the "content_hash" field in the mutation.
+func (m *DocumentMutation) ContentHash() (r string, exists bool) {
+	v := m.content_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldContentHash returns the old "content_hash" field's value of the Document entity.
+// If the Document object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DocumentMutation) OldContentHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldContentHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldContentHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldContentHash: %w", err)
+	}
+	return oldValue.ContentHash, nil
+}
+
+// ClearContentHash clears the value of the "content_hash" field.
+func (m *DocumentMutation) ClearContentHash() {
+	m.content_hash = nil
+	m.clearedFields[document.FieldContentHash] = struct{}{}
+}
+
+// ContentHashCleared returns if the "content_hash" field was cleared in this mutation.
+func (m *DocumentMutation) ContentHashCleared() bool {
+	_, ok := m.clearedFields[document.FieldContentHash]
+	return ok
+}
+
+// ResetContentHash resets all changes to the "content_hash" field.
+func (m *DocumentMutation) ResetContentHash() {
+	m.content_hash = nil
+	delete(m.clearedFields, document.FieldContentHash)
 }
 
 // SetStatus sets the "status" field.
@@ -1059,12 +1109,15 @@ func (m *DocumentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DocumentMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 5)
 	if m.name != nil {
 		fields = append(fields, document.FieldName)
 	}
-	if m.storage_path != nil {
-		fields = append(fields, document.FieldStoragePath)
+	if m.content != nil {
+		fields = append(fields, document.FieldContent)
+	}
+	if m.content_hash != nil {
+		fields = append(fields, document.FieldContentHash)
 	}
 	if m.status != nil {
 		fields = append(fields, document.FieldStatus)
@@ -1082,8 +1135,10 @@ func (m *DocumentMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case document.FieldName:
 		return m.Name()
-	case document.FieldStoragePath:
-		return m.StoragePath()
+	case document.FieldContent:
+		return m.Content()
+	case document.FieldContentHash:
+		return m.ContentHash()
 	case document.FieldStatus:
 		return m.Status()
 	case document.FieldCreatedAt:
@@ -1099,8 +1154,10 @@ func (m *DocumentMutation) OldField(ctx context.Context, name string) (ent.Value
 	switch name {
 	case document.FieldName:
 		return m.OldName(ctx)
-	case document.FieldStoragePath:
-		return m.OldStoragePath(ctx)
+	case document.FieldContent:
+		return m.OldContent(ctx)
+	case document.FieldContentHash:
+		return m.OldContentHash(ctx)
 	case document.FieldStatus:
 		return m.OldStatus(ctx)
 	case document.FieldCreatedAt:
@@ -1121,12 +1178,19 @@ func (m *DocumentMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetName(v)
 		return nil
-	case document.FieldStoragePath:
+	case document.FieldContent:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetStoragePath(v)
+		m.SetContent(v)
+		return nil
+	case document.FieldContentHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetContentHash(v)
 		return nil
 	case document.FieldStatus:
 		v, ok := value.(string)
@@ -1171,7 +1235,11 @@ func (m *DocumentMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *DocumentMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(document.FieldContentHash) {
+		fields = append(fields, document.FieldContentHash)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -1184,6 +1252,11 @@ func (m *DocumentMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *DocumentMutation) ClearField(name string) error {
+	switch name {
+	case document.FieldContentHash:
+		m.ClearContentHash()
+		return nil
+	}
 	return fmt.Errorf("unknown Document nullable field %s", name)
 }
 
@@ -1194,8 +1267,11 @@ func (m *DocumentMutation) ResetField(name string) error {
 	case document.FieldName:
 		m.ResetName()
 		return nil
-	case document.FieldStoragePath:
-		m.ResetStoragePath()
+	case document.FieldContent:
+		m.ResetContent()
+		return nil
+	case document.FieldContentHash:
+		m.ResetContentHash()
 		return nil
 	case document.FieldStatus:
 		m.ResetStatus()

@@ -20,8 +20,10 @@ type Document struct {
 	ID int `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
-	// StoragePath holds the value of the "storage_path" field.
-	StoragePath string `json:"storage_path,omitempty"`
+	// Content holds the value of the "content" field.
+	Content string `json:"content,omitempty"`
+	// ContentHash holds the value of the "content_hash" field.
+	ContentHash string `json:"content_hash,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -82,7 +84,7 @@ func (*Document) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case document.FieldID:
 			values[i] = new(sql.NullInt64)
-		case document.FieldName, document.FieldStoragePath, document.FieldStatus:
+		case document.FieldName, document.FieldContent, document.FieldContentHash, document.FieldStatus:
 			values[i] = new(sql.NullString)
 		case document.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -115,11 +117,17 @@ func (_m *Document) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Name = value.String
 			}
-		case document.FieldStoragePath:
+		case document.FieldContent:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field storage_path", values[i])
+				return fmt.Errorf("unexpected type %T for field content", values[i])
 			} else if value.Valid {
-				_m.StoragePath = value.String
+				_m.Content = value.String
+			}
+		case document.FieldContentHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field content_hash", values[i])
+			} else if value.Valid {
+				_m.ContentHash = value.String
 			}
 		case document.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -194,8 +202,11 @@ func (_m *Document) String() string {
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
-	builder.WriteString("storage_path=")
-	builder.WriteString(_m.StoragePath)
+	builder.WriteString("content=")
+	builder.WriteString(_m.Content)
+	builder.WriteString(", ")
+	builder.WriteString("content_hash=")
+	builder.WriteString(_m.ContentHash)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)

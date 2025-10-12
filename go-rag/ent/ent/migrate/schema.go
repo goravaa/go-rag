@@ -33,7 +33,8 @@ var (
 	DocumentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "name", Type: field.TypeString},
-		{Name: "storage_path", Type: field.TypeString},
+		{Name: "content", Type: field.TypeString, Size: 2147483647},
+		{Name: "content_hash", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeString, Default: "uploaded"},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "project_documents", Type: field.TypeInt, Nullable: true},
@@ -46,9 +47,16 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "documents_projects_documents",
-				Columns:    []*schema.Column{DocumentsColumns[5]},
+				Columns:    []*schema.Column{DocumentsColumns[6]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "document_content_hash",
+				Unique:  false,
+				Columns: []*schema.Column{DocumentsColumns[3]},
 			},
 		},
 	}

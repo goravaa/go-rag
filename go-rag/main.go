@@ -10,8 +10,9 @@ import (
 
 	"go-rag/internal/auth"
 	"go-rag/internal/db"
+	"go-rag/internal/documents" // Import the new documents package
 	"go-rag/internal/handlers"
-	"go-rag/internal/projects" // Import the new projects package
+	"go-rag/internal/projects"
 	"go-rag/internal/user"
 )
 
@@ -47,9 +48,11 @@ func main() {
 	// setup services
 	logrus.Debug("initializing services")
 	userService := &user.Service{Client: client}
-	projectService := &projects.Service{Client: client} // Initialize Project Service
+	projectService := &projects.Service{Client: client}
+	documentService := &documents.Service{Client: client} // Initialize Document Service
 	authHandler := &handlers.AuthHandler{UserService: userService}
-	projectHandler := &handlers.ProjectHandler{ProjectService: projectService} // Initialize Project Handler
+	projectHandler := &handlers.ProjectHandler{ProjectService: projectService}
+	documentHandler := &handlers.DocumentHandler{DocumentService: documentService} // Initialize Document Handler
 	logrus.Info("services initialized successfully")
 
 	logrus.Debug("setting up HTTP router")
@@ -74,13 +77,31 @@ func main() {
 		protected.Delete("/user", authHandler.DeleteUser)
 		protected.Post("/user/security-questions", authHandler.AddSecurityQuestion)
 
-		// Project CRUD Routes
+		// Project and Document Routes
 		protected.Route("/projects", func(r chi.Router) {
-			r.Post("/", projectHandler.CreateProject)              // POST /projects
-			r.Get("/", projectHandler.ListProjects)                // GET /projects
-			r.Get("/{projectID}", projectHandler.GetProject)       // GET /projects/123
-			r.Put("/{projectID}", projectHandler.UpdateProject)    // PUT /projects/123
-			r.Delete("/{projectID}", projectHandler.DeleteProject) // DELETE /projects/123
+			// Routes for the collection of projects
+			r.Post("/", projectHandler.CreateProject)
+			r.Get("/", projectHandler.ListProjects)
+
+			// Routes for a specific project
+			r.Route("/{projectID}", func(r chi.Router) {
+				r.Get("/", projectHandler.GetProject)
+				r.Put("/", projectHandler.UpdateProject)
+				r.Delete("/", projectHandler.DeleteProject)
+
+				// Nested Document Routes for the specific project
+				r.Route("/documents", func(r chi.Router) {
+					r.Post("/", documentHandler.CreateDocument)
+					r.Get("/", documentHandler.ListDocuments)
+
+					// Routes for a specific document
+					r.Route("/{documentID}", func(r chi.Router) {
+						r.Get("/", documentHandler.GetDocument)
+						r.Delete("/", documentHandler.DeleteDocument)
+						r.Put("/", documentHandler.UpdateDocument)
+					})
+				})
+			})
 		})
 
 		protected.Get("/me", func(w http.ResponseWriter, r *http.Request) {

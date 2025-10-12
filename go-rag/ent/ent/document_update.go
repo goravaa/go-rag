@@ -45,17 +45,37 @@ func (_u *DocumentUpdate) SetNillableName(v *string) *DocumentUpdate {
 	return _u
 }
 
-// SetStoragePath sets the "storage_path" field.
-func (_u *DocumentUpdate) SetStoragePath(v string) *DocumentUpdate {
-	_u.mutation.SetStoragePath(v)
+// SetContent sets the "content" field.
+func (_u *DocumentUpdate) SetContent(v string) *DocumentUpdate {
+	_u.mutation.SetContent(v)
 	return _u
 }
 
-// SetNillableStoragePath sets the "storage_path" field if the given value is not nil.
-func (_u *DocumentUpdate) SetNillableStoragePath(v *string) *DocumentUpdate {
+// SetNillableContent sets the "content" field if the given value is not nil.
+func (_u *DocumentUpdate) SetNillableContent(v *string) *DocumentUpdate {
 	if v != nil {
-		_u.SetStoragePath(*v)
+		_u.SetContent(*v)
 	}
+	return _u
+}
+
+// SetContentHash sets the "content_hash" field.
+func (_u *DocumentUpdate) SetContentHash(v string) *DocumentUpdate {
+	_u.mutation.SetContentHash(v)
+	return _u
+}
+
+// SetNillableContentHash sets the "content_hash" field if the given value is not nil.
+func (_u *DocumentUpdate) SetNillableContentHash(v *string) *DocumentUpdate {
+	if v != nil {
+		_u.SetContentHash(*v)
+	}
+	return _u
+}
+
+// ClearContentHash clears the value of the "content_hash" field.
+func (_u *DocumentUpdate) ClearContentHash() *DocumentUpdate {
+	_u.mutation.ClearContentHash()
 	return _u
 }
 
@@ -228,8 +248,14 @@ func (_u *DocumentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(document.FieldName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.StoragePath(); ok {
-		_spec.SetField(document.FieldStoragePath, field.TypeString, value)
+	if value, ok := _u.mutation.Content(); ok {
+		_spec.SetField(document.FieldContent, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ContentHash(); ok {
+		_spec.SetField(document.FieldContentHash, field.TypeString, value)
+	}
+	if _u.mutation.ContentHashCleared() {
+		_spec.ClearField(document.FieldContentHash, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(document.FieldStatus, field.TypeString, value)
@@ -390,17 +416,37 @@ func (_u *DocumentUpdateOne) SetNillableName(v *string) *DocumentUpdateOne {
 	return _u
 }
 
-// SetStoragePath sets the "storage_path" field.
-func (_u *DocumentUpdateOne) SetStoragePath(v string) *DocumentUpdateOne {
-	_u.mutation.SetStoragePath(v)
+// SetContent sets the "content" field.
+func (_u *DocumentUpdateOne) SetContent(v string) *DocumentUpdateOne {
+	_u.mutation.SetContent(v)
 	return _u
 }
 
-// SetNillableStoragePath sets the "storage_path" field if the given value is not nil.
-func (_u *DocumentUpdateOne) SetNillableStoragePath(v *string) *DocumentUpdateOne {
+// SetNillableContent sets the "content" field if the given value is not nil.
+func (_u *DocumentUpdateOne) SetNillableContent(v *string) *DocumentUpdateOne {
 	if v != nil {
-		_u.SetStoragePath(*v)
+		_u.SetContent(*v)
 	}
+	return _u
+}
+
+// SetContentHash sets the "content_hash" field.
+func (_u *DocumentUpdateOne) SetContentHash(v string) *DocumentUpdateOne {
+	_u.mutation.SetContentHash(v)
+	return _u
+}
+
+// SetNillableContentHash sets the "content_hash" field if the given value is not nil.
+func (_u *DocumentUpdateOne) SetNillableContentHash(v *string) *DocumentUpdateOne {
+	if v != nil {
+		_u.SetContentHash(*v)
+	}
+	return _u
+}
+
+// ClearContentHash clears the value of the "content_hash" field.
+func (_u *DocumentUpdateOne) ClearContentHash() *DocumentUpdateOne {
+	_u.mutation.ClearContentHash()
 	return _u
 }
 
@@ -603,8 +649,14 @@ func (_u *DocumentUpdateOne) sqlSave(ctx context.Context) (_node *Document, err 
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(document.FieldName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.StoragePath(); ok {
-		_spec.SetField(document.FieldStoragePath, field.TypeString, value)
+	if value, ok := _u.mutation.Content(); ok {
+		_spec.SetField(document.FieldContent, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ContentHash(); ok {
+		_spec.SetField(document.FieldContentHash, field.TypeString, value)
+	}
+	if _u.mutation.ContentHashCleared() {
+		_spec.ClearField(document.FieldContentHash, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(document.FieldStatus, field.TypeString, value)

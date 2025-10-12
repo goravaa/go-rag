@@ -29,9 +29,23 @@ func (_c *DocumentCreate) SetName(v string) *DocumentCreate {
 	return _c
 }
 
-// SetStoragePath sets the "storage_path" field.
-func (_c *DocumentCreate) SetStoragePath(v string) *DocumentCreate {
-	_c.mutation.SetStoragePath(v)
+// SetContent sets the "content" field.
+func (_c *DocumentCreate) SetContent(v string) *DocumentCreate {
+	_c.mutation.SetContent(v)
+	return _c
+}
+
+// SetContentHash sets the "content_hash" field.
+func (_c *DocumentCreate) SetContentHash(v string) *DocumentCreate {
+	_c.mutation.SetContentHash(v)
+	return _c
+}
+
+// SetNillableContentHash sets the "content_hash" field if the given value is not nil.
+func (_c *DocumentCreate) SetNillableContentHash(v *string) *DocumentCreate {
+	if v != nil {
+		_c.SetContentHash(*v)
+	}
 	return _c
 }
 
@@ -162,8 +176,8 @@ func (_c *DocumentCreate) check() error {
 	if _, ok := _c.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Document.name"`)}
 	}
-	if _, ok := _c.mutation.StoragePath(); !ok {
-		return &ValidationError{Name: "storage_path", err: errors.New(`ent: missing required field "Document.storage_path"`)}
+	if _, ok := _c.mutation.Content(); !ok {
+		return &ValidationError{Name: "content", err: errors.New(`ent: missing required field "Document.content"`)}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Document.status"`)}
@@ -201,9 +215,13 @@ func (_c *DocumentCreate) createSpec() (*Document, *sqlgraph.CreateSpec) {
 		_spec.SetField(document.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
-	if value, ok := _c.mutation.StoragePath(); ok {
-		_spec.SetField(document.FieldStoragePath, field.TypeString, value)
-		_node.StoragePath = value
+	if value, ok := _c.mutation.Content(); ok {
+		_spec.SetField(document.FieldContent, field.TypeString, value)
+		_node.Content = value
+	}
+	if value, ok := _c.mutation.ContentHash(); ok {
+		_spec.SetField(document.FieldContentHash, field.TypeString, value)
+		_node.ContentHash = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(document.FieldStatus, field.TypeString, value)

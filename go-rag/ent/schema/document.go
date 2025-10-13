@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -35,7 +36,10 @@ func (Document) Edges() []ent.Edge {
 		edge.From("project", Project.Type).
 			Ref("documents").
 			Unique(),
-		edge.To("chunks", Chunk.Type),
-		edge.To("query_results", QueryResult.Type),
+
+		edge.To("chunks", Chunk.Type).
+			Annotations(
+				entsql.OnDelete(entsql.Cascade),
+			),
 	}
 }

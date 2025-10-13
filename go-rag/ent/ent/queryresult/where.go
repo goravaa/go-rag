@@ -237,21 +237,21 @@ func HasQueryWith(preds ...predicate.UserPrompt) predicate.QueryResult {
 	})
 }
 
-// HasDocument applies the HasEdge predicate on the "document" edge.
-func HasDocument() predicate.QueryResult {
+// HasChunks applies the HasEdge predicate on the "chunks" edge.
+func HasChunks() predicate.QueryResult {
 	return predicate.QueryResult(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, DocumentTable, DocumentColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, ChunksTable, ChunksPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasDocumentWith applies the HasEdge predicate on the "document" edge with a given conditions (other predicates).
-func HasDocumentWith(preds ...predicate.Document) predicate.QueryResult {
+// HasChunksWith applies the HasEdge predicate on the "chunks" edge with a given conditions (other predicates).
+func HasChunksWith(preds ...predicate.Chunk) predicate.QueryResult {
 	return predicate.QueryResult(func(s *sql.Selector) {
-		step := newDocumentStep()
+		step := newChunksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

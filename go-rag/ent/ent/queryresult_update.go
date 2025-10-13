@@ -6,7 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go-rag/ent/ent/document"
+	"go-rag/ent/ent/chunk"
 	"go-rag/ent/ent/predicate"
 	"go-rag/ent/ent/queryresult"
 	"go-rag/ent/ent/userprompt"
@@ -104,23 +104,19 @@ func (_u *QueryResultUpdate) SetQuery(v *UserPrompt) *QueryResultUpdate {
 	return _u.SetQueryID(v.ID)
 }
 
-// SetDocumentID sets the "document" edge to the Document entity by ID.
-func (_u *QueryResultUpdate) SetDocumentID(id int) *QueryResultUpdate {
-	_u.mutation.SetDocumentID(id)
+// AddChunkIDs adds the "chunks" edge to the Chunk entity by IDs.
+func (_u *QueryResultUpdate) AddChunkIDs(ids ...int) *QueryResultUpdate {
+	_u.mutation.AddChunkIDs(ids...)
 	return _u
 }
 
-// SetNillableDocumentID sets the "document" edge to the Document entity by ID if the given value is not nil.
-func (_u *QueryResultUpdate) SetNillableDocumentID(id *int) *QueryResultUpdate {
-	if id != nil {
-		_u = _u.SetDocumentID(*id)
+// AddChunks adds the "chunks" edges to the Chunk entity.
+func (_u *QueryResultUpdate) AddChunks(v ...*Chunk) *QueryResultUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _u
-}
-
-// SetDocument sets the "document" edge to the Document entity.
-func (_u *QueryResultUpdate) SetDocument(v *Document) *QueryResultUpdate {
-	return _u.SetDocumentID(v.ID)
+	return _u.AddChunkIDs(ids...)
 }
 
 // Mutation returns the QueryResultMutation object of the builder.
@@ -134,10 +130,25 @@ func (_u *QueryResultUpdate) ClearQuery() *QueryResultUpdate {
 	return _u
 }
 
-// ClearDocument clears the "document" edge to the Document entity.
-func (_u *QueryResultUpdate) ClearDocument() *QueryResultUpdate {
-	_u.mutation.ClearDocument()
+// ClearChunks clears all "chunks" edges to the Chunk entity.
+func (_u *QueryResultUpdate) ClearChunks() *QueryResultUpdate {
+	_u.mutation.ClearChunks()
 	return _u
+}
+
+// RemoveChunkIDs removes the "chunks" edge to Chunk entities by IDs.
+func (_u *QueryResultUpdate) RemoveChunkIDs(ids ...int) *QueryResultUpdate {
+	_u.mutation.RemoveChunkIDs(ids...)
+	return _u
+}
+
+// RemoveChunks removes "chunks" edges to Chunk entities.
+func (_u *QueryResultUpdate) RemoveChunks(v ...*Chunk) *QueryResultUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveChunkIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -220,28 +231,44 @@ func (_u *QueryResultUpdate) sqlSave(ctx context.Context) (_node int, err error)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.DocumentCleared() {
+	if _u.mutation.ChunksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   queryresult.DocumentTable,
-			Columns: []string{queryresult.DocumentColumn},
+			Table:   queryresult.ChunksTable,
+			Columns: queryresult.ChunksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(document.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(chunk.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.DocumentIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RemovedChunksIDs(); len(nodes) > 0 && !_u.mutation.ChunksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   queryresult.DocumentTable,
-			Columns: []string{queryresult.DocumentColumn},
+			Table:   queryresult.ChunksTable,
+			Columns: queryresult.ChunksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(document.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(chunk.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ChunksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   queryresult.ChunksTable,
+			Columns: queryresult.ChunksPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(chunk.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -344,23 +371,19 @@ func (_u *QueryResultUpdateOne) SetQuery(v *UserPrompt) *QueryResultUpdateOne {
 	return _u.SetQueryID(v.ID)
 }
 
-// SetDocumentID sets the "document" edge to the Document entity by ID.
-func (_u *QueryResultUpdateOne) SetDocumentID(id int) *QueryResultUpdateOne {
-	_u.mutation.SetDocumentID(id)
+// AddChunkIDs adds the "chunks" edge to the Chunk entity by IDs.
+func (_u *QueryResultUpdateOne) AddChunkIDs(ids ...int) *QueryResultUpdateOne {
+	_u.mutation.AddChunkIDs(ids...)
 	return _u
 }
 
-// SetNillableDocumentID sets the "document" edge to the Document entity by ID if the given value is not nil.
-func (_u *QueryResultUpdateOne) SetNillableDocumentID(id *int) *QueryResultUpdateOne {
-	if id != nil {
-		_u = _u.SetDocumentID(*id)
+// AddChunks adds the "chunks" edges to the Chunk entity.
+func (_u *QueryResultUpdateOne) AddChunks(v ...*Chunk) *QueryResultUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _u
-}
-
-// SetDocument sets the "document" edge to the Document entity.
-func (_u *QueryResultUpdateOne) SetDocument(v *Document) *QueryResultUpdateOne {
-	return _u.SetDocumentID(v.ID)
+	return _u.AddChunkIDs(ids...)
 }
 
 // Mutation returns the QueryResultMutation object of the builder.
@@ -374,10 +397,25 @@ func (_u *QueryResultUpdateOne) ClearQuery() *QueryResultUpdateOne {
 	return _u
 }
 
-// ClearDocument clears the "document" edge to the Document entity.
-func (_u *QueryResultUpdateOne) ClearDocument() *QueryResultUpdateOne {
-	_u.mutation.ClearDocument()
+// ClearChunks clears all "chunks" edges to the Chunk entity.
+func (_u *QueryResultUpdateOne) ClearChunks() *QueryResultUpdateOne {
+	_u.mutation.ClearChunks()
 	return _u
+}
+
+// RemoveChunkIDs removes the "chunks" edge to Chunk entities by IDs.
+func (_u *QueryResultUpdateOne) RemoveChunkIDs(ids ...int) *QueryResultUpdateOne {
+	_u.mutation.RemoveChunkIDs(ids...)
+	return _u
+}
+
+// RemoveChunks removes "chunks" edges to Chunk entities.
+func (_u *QueryResultUpdateOne) RemoveChunks(v ...*Chunk) *QueryResultUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveChunkIDs(ids...)
 }
 
 // Where appends a list predicates to the QueryResultUpdate builder.
@@ -490,28 +528,44 @@ func (_u *QueryResultUpdateOne) sqlSave(ctx context.Context) (_node *QueryResult
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.DocumentCleared() {
+	if _u.mutation.ChunksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   queryresult.DocumentTable,
-			Columns: []string{queryresult.DocumentColumn},
+			Table:   queryresult.ChunksTable,
+			Columns: queryresult.ChunksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(document.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(chunk.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.DocumentIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RemovedChunksIDs(); len(nodes) > 0 && !_u.mutation.ChunksCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   queryresult.DocumentTable,
-			Columns: []string{queryresult.DocumentColumn},
+			Table:   queryresult.ChunksTable,
+			Columns: queryresult.ChunksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(document.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(chunk.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ChunksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   queryresult.ChunksTable,
+			Columns: queryresult.ChunksPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(chunk.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

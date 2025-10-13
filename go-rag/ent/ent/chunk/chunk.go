@@ -16,10 +16,12 @@ const (
 	FieldIndex = "index"
 	// FieldContent holds the string denoting the content field in the database.
 	FieldContent = "content"
+	// FieldContentHash holds the string denoting the content_hash field in the database.
+	FieldContentHash = "content_hash"
 	// EdgeDocument holds the string denoting the document edge name in mutations.
 	EdgeDocument = "document"
-	// EdgeEmbeddings holds the string denoting the embeddings edge name in mutations.
-	EdgeEmbeddings = "embeddings"
+	// EdgeQueryResults holds the string denoting the query_results edge name in mutations.
+	EdgeQueryResults = "query_results"
 	// Table holds the table name of the chunk in the database.
 	Table = "chunks"
 	// DocumentTable is the table that holds the document relation/edge.
@@ -29,13 +31,11 @@ const (
 	DocumentInverseTable = "documents"
 	// DocumentColumn is the table column denoting the document relation/edge.
 	DocumentColumn = "document_chunks"
-	// EmbeddingsTable is the table that holds the embeddings relation/edge.
-	EmbeddingsTable = "embeddings"
-	// EmbeddingsInverseTable is the table name for the Embedding entity.
-	// It exists in this package in order to avoid circular dependency with the "embedding" package.
-	EmbeddingsInverseTable = "embeddings"
-	// EmbeddingsColumn is the table column denoting the embeddings relation/edge.
-	EmbeddingsColumn = "chunk_embeddings"
+	// QueryResultsTable is the table that holds the query_results relation/edge. The primary key declared below.
+	QueryResultsTable = "chunk_query_results"
+	// QueryResultsInverseTable is the table name for the QueryResult entity.
+	// It exists in this package in order to avoid circular dependency with the "queryresult" package.
+	QueryResultsInverseTable = "query_results"
 )
 
 // Columns holds all SQL columns for chunk fields.
@@ -43,6 +43,7 @@ var Columns = []string{
 	FieldID,
 	FieldIndex,
 	FieldContent,
+	FieldContentHash,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "chunks"
@@ -50,6 +51,12 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"document_chunks",
 }
+
+var (
+	// QueryResultsPrimaryKey and QueryResultsColumn2 are the table columns denoting the
+	// primary key for the query_results relation (M2M).
+	QueryResultsPrimaryKey = []string{"chunk_id", "query_result_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -84,6 +91,11 @@ func ByContent(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldContent, opts...).ToFunc()
 }
 
+// ByContentHash orders the results by the content_hash field.
+func ByContentHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldContentHash, opts...).ToFunc()
+}
+
 // ByDocumentField orders the results by document field.
 func ByDocumentField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -91,17 +103,17 @@ func ByDocumentField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByEmbeddingsCount orders the results by embeddings count.
-func ByEmbeddingsCount(opts ...sql.OrderTermOption) OrderOption {
+// ByQueryResultsCount orders the results by query_results count.
+func ByQueryResultsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newEmbeddingsStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newQueryResultsStep(), opts...)
 	}
 }
 
-// ByEmbeddings orders the results by embeddings terms.
-func ByEmbeddings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByQueryResults orders the results by query_results terms.
+func ByQueryResults(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newEmbeddingsStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newQueryResultsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newDocumentStep() *sqlgraph.Step {
@@ -111,10 +123,10 @@ func newDocumentStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, DocumentTable, DocumentColumn),
 	)
 }
-func newEmbeddingsStep() *sqlgraph.Step {
+func newQueryResultsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(EmbeddingsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, EmbeddingsTable, EmbeddingsColumn),
+		sqlgraph.To(QueryResultsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, QueryResultsTable, QueryResultsPrimaryKey...),
 	)
 }

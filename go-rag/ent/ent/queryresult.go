@@ -4,7 +4,6 @@ package ent
 
 import (
 	"fmt"
-	"go-rag/ent/ent/document"
 	"go-rag/ent/ent/queryresult"
 	"go-rag/ent/ent/userprompt"
 	"strings"
@@ -26,18 +25,17 @@ type QueryResult struct {
 	ContentSnippet string `json:"content_snippet,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the QueryResultQuery when eager-loading is set.
-	Edges                  QueryResultEdges `json:"edges"`
-	document_query_results *int
-	user_prompt_results    *int
-	selectValues           sql.SelectValues
+	Edges               QueryResultEdges `json:"edges"`
+	user_prompt_results *int
+	selectValues        sql.SelectValues
 }
 
 // QueryResultEdges holds the relations/edges for other nodes in the graph.
 type QueryResultEdges struct {
 	// Query holds the value of the query edge.
 	Query *UserPrompt `json:"query,omitempty"`
-	// Document holds the value of the document edge.
-	Document *Document `json:"document,omitempty"`
+	// Chunks holds the value of the chunks edge.
+	Chunks []*Chunk `json:"chunks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
@@ -54,15 +52,13 @@ func (e QueryResultEdges) QueryOrErr() (*UserPrompt, error) {
 	return nil, &NotLoadedError{edge: "query"}
 }
 
-// DocumentOrErr returns the Document value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e QueryResultEdges) DocumentOrErr() (*Document, error) {
-	if e.Document != nil {
-		return e.Document, nil
-	} else if e.loadedTypes[1] {
-		return nil, &NotFoundError{label: document.Label}
+// ChunksOrErr returns the Chunks value or an error if the edge
+// was not loaded in eager-loading.
+func (e QueryResultEdges) ChunksOrErr() ([]*Chunk, error) {
+	if e.loadedTypes[1] {
+		return e.Chunks, nil
 	}
-	return nil, &NotLoadedError{edge: "document"}
+	return nil, &NotLoadedError{edge: "chunks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -76,9 +72,7 @@ func (*QueryResult) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case queryresult.FieldContentSnippet:
 			values[i] = new(sql.NullString)
-		case queryresult.ForeignKeys[0]: // document_query_results
-			values[i] = new(sql.NullInt64)
-		case queryresult.ForeignKeys[1]: // user_prompt_results
+		case queryresult.ForeignKeys[0]: // user_prompt_results
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -121,13 +115,6 @@ func (_m *QueryResult) assignValues(columns []string, values []any) error {
 			}
 		case queryresult.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field document_query_results", value)
-			} else if value.Valid {
-				_m.document_query_results = new(int)
-				*_m.document_query_results = int(value.Int64)
-			}
-		case queryresult.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field user_prompt_results", value)
 			} else if value.Valid {
 				_m.user_prompt_results = new(int)
@@ -151,9 +138,9 @@ func (_m *QueryResult) QueryQuery() *UserPromptQuery {
 	return NewQueryResultClient(_m.config).QueryQuery(_m)
 }
 
-// QueryDocument queries the "document" edge of the QueryResult entity.
-func (_m *QueryResult) QueryDocument() *DocumentQuery {
-	return NewQueryResultClient(_m.config).QueryDocument(_m)
+// QueryChunks queries the "chunks" edge of the QueryResult entity.
+func (_m *QueryResult) QueryChunks() *ChunkQuery {
+	return NewQueryResultClient(_m.config).QueryChunks(_m)
 }
 
 // Update returns a builder for updating this QueryResult.

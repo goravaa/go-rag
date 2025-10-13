@@ -13,6 +13,7 @@ var (
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "index", Type: field.TypeInt},
 		{Name: "content", Type: field.TypeString, Size: 2147483647},
+		{Name: "content_hash", Type: field.TypeString, Nullable: true},
 		{Name: "document_chunks", Type: field.TypeInt, Nullable: true},
 	}
 	// ChunksTable holds the schema information for the "chunks" table.
@@ -23,9 +24,16 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "chunks_documents_chunks",
-				Columns:    []*schema.Column{ChunksColumns[3]},
+				Columns:    []*schema.Column{ChunksColumns[4]},
 				RefColumns: []*schema.Column{DocumentsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "chunk_content_hash",
+				Unique:  false,
+				Columns: []*schema.Column{ChunksColumns[3]},
 			},
 		},
 	}
@@ -49,7 +57,7 @@ var (
 				Symbol:     "documents_projects_documents",
 				Columns:    []*schema.Column{DocumentsColumns[6]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
@@ -57,26 +65,6 @@ var (
 				Name:    "document_content_hash",
 				Unique:  false,
 				Columns: []*schema.Column{DocumentsColumns[3]},
-			},
-		},
-	}
-	// EmbeddingsColumns holds the columns for the "embeddings" table.
-	EmbeddingsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "vector", Type: field.TypeJSON},
-		{Name: "chunk_embeddings", Type: field.TypeInt, Nullable: true},
-	}
-	// EmbeddingsTable holds the schema information for the "embeddings" table.
-	EmbeddingsTable = &schema.Table{
-		Name:       "embeddings",
-		Columns:    EmbeddingsColumns,
-		PrimaryKey: []*schema.Column{EmbeddingsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "embeddings_chunks_embeddings",
-				Columns:    []*schema.Column{EmbeddingsColumns[2]},
-				RefColumns: []*schema.Column{ChunksColumns[0]},
-				OnDelete:   schema.SetNull,
 			},
 		},
 	}
@@ -108,7 +96,6 @@ var (
 		{Name: "rank", Type: field.TypeInt},
 		{Name: "score", Type: field.TypeFloat64},
 		{Name: "content_snippet", Type: field.TypeString, Size: 2147483647},
-		{Name: "document_query_results", Type: field.TypeInt, Nullable: true},
 		{Name: "user_prompt_results", Type: field.TypeInt, Nullable: true},
 	}
 	// QueryResultsTable holds the schema information for the "query_results" table.
@@ -118,14 +105,8 @@ var (
 		PrimaryKey: []*schema.Column{QueryResultsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "query_results_documents_query_results",
-				Columns:    []*schema.Column{QueryResultsColumns[4]},
-				RefColumns: []*schema.Column{DocumentsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
 				Symbol:     "query_results_user_prompts_results",
-				Columns:    []*schema.Column{QueryResultsColumns[5]},
+				Columns:    []*schema.Column{QueryResultsColumns[4]},
 				RefColumns: []*schema.Column{UserPromptsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -217,7 +198,7 @@ var (
 				Symbol:     "user_prompts_projects_queries",
 				Columns:    []*schema.Column{UserPromptsColumns[3]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "user_prompts_users_queries",
@@ -227,29 +208,54 @@ var (
 			},
 		},
 	}
+	// ChunkQueryResultsColumns holds the columns for the "chunk_query_results" table.
+	ChunkQueryResultsColumns = []*schema.Column{
+		{Name: "chunk_id", Type: field.TypeInt},
+		{Name: "query_result_id", Type: field.TypeInt},
+	}
+	// ChunkQueryResultsTable holds the schema information for the "chunk_query_results" table.
+	ChunkQueryResultsTable = &schema.Table{
+		Name:       "chunk_query_results",
+		Columns:    ChunkQueryResultsColumns,
+		PrimaryKey: []*schema.Column{ChunkQueryResultsColumns[0], ChunkQueryResultsColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "chunk_query_results_chunk_id",
+				Columns:    []*schema.Column{ChunkQueryResultsColumns[0]},
+				RefColumns: []*schema.Column{ChunksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "chunk_query_results_query_result_id",
+				Columns:    []*schema.Column{ChunkQueryResultsColumns[1]},
+				RefColumns: []*schema.Column{QueryResultsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ChunksTable,
 		DocumentsTable,
-		EmbeddingsTable,
 		ProjectsTable,
 		QueryResultsTable,
 		SecurityQuestionsTable,
 		SessionsTable,
 		UsersTable,
 		UserPromptsTable,
+		ChunkQueryResultsTable,
 	}
 )
 
 func init() {
 	ChunksTable.ForeignKeys[0].RefTable = DocumentsTable
 	DocumentsTable.ForeignKeys[0].RefTable = ProjectsTable
-	EmbeddingsTable.ForeignKeys[0].RefTable = ChunksTable
 	ProjectsTable.ForeignKeys[0].RefTable = UsersTable
-	QueryResultsTable.ForeignKeys[0].RefTable = DocumentsTable
-	QueryResultsTable.ForeignKeys[1].RefTable = UserPromptsTable
+	QueryResultsTable.ForeignKeys[0].RefTable = UserPromptsTable
 	SecurityQuestionsTable.ForeignKeys[0].RefTable = UsersTable
 	SessionsTable.ForeignKeys[0].RefTable = UsersTable
 	UserPromptsTable.ForeignKeys[0].RefTable = ProjectsTable
 	UserPromptsTable.ForeignKeys[1].RefTable = UsersTable
+	ChunkQueryResultsTable.ForeignKeys[0].RefTable = ChunksTable
+	ChunkQueryResultsTable.ForeignKeys[1].RefTable = QueryResultsTable
 }

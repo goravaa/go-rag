@@ -6,7 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go-rag/ent/ent/document"
+	"go-rag/ent/ent/chunk"
 	"go-rag/ent/ent/queryresult"
 	"go-rag/ent/ent/userprompt"
 
@@ -58,23 +58,19 @@ func (_c *QueryResultCreate) SetQuery(v *UserPrompt) *QueryResultCreate {
 	return _c.SetQueryID(v.ID)
 }
 
-// SetDocumentID sets the "document" edge to the Document entity by ID.
-func (_c *QueryResultCreate) SetDocumentID(id int) *QueryResultCreate {
-	_c.mutation.SetDocumentID(id)
+// AddChunkIDs adds the "chunks" edge to the Chunk entity by IDs.
+func (_c *QueryResultCreate) AddChunkIDs(ids ...int) *QueryResultCreate {
+	_c.mutation.AddChunkIDs(ids...)
 	return _c
 }
 
-// SetNillableDocumentID sets the "document" edge to the Document entity by ID if the given value is not nil.
-func (_c *QueryResultCreate) SetNillableDocumentID(id *int) *QueryResultCreate {
-	if id != nil {
-		_c = _c.SetDocumentID(*id)
+// AddChunks adds the "chunks" edges to the Chunk entity.
+func (_c *QueryResultCreate) AddChunks(v ...*Chunk) *QueryResultCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _c
-}
-
-// SetDocument sets the "document" edge to the Document entity.
-func (_c *QueryResultCreate) SetDocument(v *Document) *QueryResultCreate {
-	return _c.SetDocumentID(v.ID)
+	return _c.AddChunkIDs(ids...)
 }
 
 // Mutation returns the QueryResultMutation object of the builder.
@@ -175,21 +171,20 @@ func (_c *QueryResultCreate) createSpec() (*QueryResult, *sqlgraph.CreateSpec) {
 		_node.user_prompt_results = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.DocumentIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ChunksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   queryresult.DocumentTable,
-			Columns: []string{queryresult.DocumentColumn},
+			Table:   queryresult.ChunksTable,
+			Columns: queryresult.ChunksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(document.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(chunk.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.document_query_results = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

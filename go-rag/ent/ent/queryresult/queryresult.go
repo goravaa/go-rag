@@ -20,8 +20,8 @@ const (
 	FieldContentSnippet = "content_snippet"
 	// EdgeQuery holds the string denoting the query edge name in mutations.
 	EdgeQuery = "query"
-	// EdgeDocument holds the string denoting the document edge name in mutations.
-	EdgeDocument = "document"
+	// EdgeChunks holds the string denoting the chunks edge name in mutations.
+	EdgeChunks = "chunks"
 	// Table holds the table name of the queryresult in the database.
 	Table = "query_results"
 	// QueryTable is the table that holds the query relation/edge.
@@ -31,13 +31,11 @@ const (
 	QueryInverseTable = "user_prompts"
 	// QueryColumn is the table column denoting the query relation/edge.
 	QueryColumn = "user_prompt_results"
-	// DocumentTable is the table that holds the document relation/edge.
-	DocumentTable = "query_results"
-	// DocumentInverseTable is the table name for the Document entity.
-	// It exists in this package in order to avoid circular dependency with the "document" package.
-	DocumentInverseTable = "documents"
-	// DocumentColumn is the table column denoting the document relation/edge.
-	DocumentColumn = "document_query_results"
+	// ChunksTable is the table that holds the chunks relation/edge. The primary key declared below.
+	ChunksTable = "chunk_query_results"
+	// ChunksInverseTable is the table name for the Chunk entity.
+	// It exists in this package in order to avoid circular dependency with the "chunk" package.
+	ChunksInverseTable = "chunks"
 )
 
 // Columns holds all SQL columns for queryresult fields.
@@ -51,9 +49,14 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "query_results"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"document_query_results",
 	"user_prompt_results",
 }
+
+var (
+	// ChunksPrimaryKey and ChunksColumn2 are the table columns denoting the
+	// primary key for the chunks relation (M2M).
+	ChunksPrimaryKey = []string{"chunk_id", "query_result_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -100,10 +103,17 @@ func ByQueryField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByDocumentField orders the results by document field.
-func ByDocumentField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByChunksCount orders the results by chunks count.
+func ByChunksCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newDocumentStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborsCount(s, newChunksStep(), opts...)
+	}
+}
+
+// ByChunks orders the results by chunks terms.
+func ByChunks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newChunksStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newQueryStep() *sqlgraph.Step {
@@ -113,10 +123,10 @@ func newQueryStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, QueryTable, QueryColumn),
 	)
 }
-func newDocumentStep() *sqlgraph.Step {
+func newChunksStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(DocumentInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, DocumentTable, DocumentColumn),
+		sqlgraph.To(ChunksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, ChunksTable, ChunksPrimaryKey...),
 	)
 }

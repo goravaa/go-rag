@@ -12,9 +12,6 @@ type Chunk func(*sql.Selector)
 // Document is the predicate function for document builders.
 type Document func(*sql.Selector)
 
-// Embedding is the predicate function for embedding builders.
-type Embedding func(*sql.Selector)
-
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
 

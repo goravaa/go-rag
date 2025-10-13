@@ -32,18 +32,6 @@ func (f DocumentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, er
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DocumentMutation", m)
 }
 
-// The EmbeddingFunc type is an adapter to allow the use of ordinary
-// function as Embedding mutator.
-type EmbeddingFunc func(context.Context, *ent.EmbeddingMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f EmbeddingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.EmbeddingMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmbeddingMutation", m)
-}
-
 // The ProjectFunc type is an adapter to allow the use of ordinary
 // function as Project mutator.
 type ProjectFunc func(context.Context, *ent.ProjectMutation) (ent.Value, error)

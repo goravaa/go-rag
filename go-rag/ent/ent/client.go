@@ -13,7 +13,6 @@ import (
 
 	"go-rag/ent/ent/chunk"
 	"go-rag/ent/ent/document"
-	"go-rag/ent/ent/embedding"
 	"go-rag/ent/ent/project"
 	"go-rag/ent/ent/queryresult"
 	"go-rag/ent/ent/securityquestion"
@@ -37,8 +36,6 @@ type Client struct {
 	Chunk *ChunkClient
 	// Document is the client for interacting with the Document builders.
 	Document *DocumentClient
-	// Embedding is the client for interacting with the Embedding builders.
-	Embedding *EmbeddingClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
 	// QueryResult is the client for interacting with the QueryResult builders.
@@ -64,7 +61,6 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Chunk = NewChunkClient(c.config)
 	c.Document = NewDocumentClient(c.config)
-	c.Embedding = NewEmbeddingClient(c.config)
 	c.Project = NewProjectClient(c.config)
 	c.QueryResult = NewQueryResultClient(c.config)
 	c.SecurityQuestion = NewSecurityQuestionClient(c.config)
@@ -165,7 +161,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:           cfg,
 		Chunk:            NewChunkClient(cfg),
 		Document:         NewDocumentClient(cfg),
-		Embedding:        NewEmbeddingClient(cfg),
 		Project:          NewProjectClient(cfg),
 		QueryResult:      NewQueryResultClient(cfg),
 		SecurityQuestion: NewSecurityQuestionClient(cfg),
@@ -193,7 +188,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:           cfg,
 		Chunk:            NewChunkClient(cfg),
 		Document:         NewDocumentClient(cfg),
-		Embedding:        NewEmbeddingClient(cfg),
 		Project:          NewProjectClient(cfg),
 		QueryResult:      NewQueryResultClient(cfg),
 		SecurityQuestion: NewSecurityQuestionClient(cfg),
@@ -229,8 +223,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Chunk, c.Document, c.Embedding, c.Project, c.QueryResult, c.SecurityQuestion,
-		c.Session, c.User, c.UserPrompt,
+		c.Chunk, c.Document, c.Project, c.QueryResult, c.SecurityQuestion, c.Session,
+		c.User, c.UserPrompt,
 	} {
 		n.Use(hooks...)
 	}
@@ -240,8 +234,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Chunk, c.Document, c.Embedding, c.Project, c.QueryResult, c.SecurityQuestion,
-		c.Session, c.User, c.UserPrompt,
+		c.Chunk, c.Document, c.Project, c.QueryResult, c.SecurityQuestion, c.Session,
+		c.User, c.UserPrompt,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -254,8 +248,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Chunk.mutate(ctx, m)
 	case *DocumentMutation:
 		return c.Document.mutate(ctx, m)
-	case *EmbeddingMutation:
-		return c.Embedding.mutate(ctx, m)
 	case *ProjectMutation:
 		return c.Project.mutate(ctx, m)
 	case *QueryResultMutation:
@@ -397,15 +389,15 @@ func (c *ChunkClient) QueryDocument(_m *Chunk) *DocumentQuery {
 	return query
 }
 
-// QueryEmbeddings queries the embeddings edge of a Chunk.
-func (c *ChunkClient) QueryEmbeddings(_m *Chunk) *EmbeddingQuery {
-	query := (&EmbeddingClient{config: c.config}).Query()
+// QueryQueryResults queries the query_results edge of a Chunk.
+func (c *ChunkClient) QueryQueryResults(_m *Chunk) *QueryResultQuery {
+	query := (&QueryResultClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(chunk.Table, chunk.FieldID, id),
-			sqlgraph.To(embedding.Table, embedding.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, chunk.EmbeddingsTable, chunk.EmbeddingsColumn),
+			sqlgraph.To(queryresult.Table, queryresult.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, chunk.QueryResultsTable, chunk.QueryResultsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -578,22 +570,6 @@ func (c *DocumentClient) QueryChunks(_m *Document) *ChunkQuery {
 	return query
 }
 
-// QueryQueryResults queries the query_results edge of a Document.
-func (c *DocumentClient) QueryQueryResults(_m *Document) *QueryResultQuery {
-	query := (&QueryResultClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(document.Table, document.FieldID, id),
-			sqlgraph.To(queryresult.Table, queryresult.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, document.QueryResultsTable, document.QueryResultsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *DocumentClient) Hooks() []Hook {
 	return c.hooks.Document
@@ -616,155 +592,6 @@ func (c *DocumentClient) mutate(ctx context.Context, m *DocumentMutation) (Value
 		return (&DocumentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Document mutation op: %q", m.Op())
-	}
-}
-
-// EmbeddingClient is a client for the Embedding schema.
-type EmbeddingClient struct {
-	config
-}
-
-// NewEmbeddingClient returns a client for the Embedding from the given config.
-func NewEmbeddingClient(c config) *EmbeddingClient {
-	return &EmbeddingClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `embedding.Hooks(f(g(h())))`.
-func (c *EmbeddingClient) Use(hooks ...Hook) {
-	c.hooks.Embedding = append(c.hooks.Embedding, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `embedding.Intercept(f(g(h())))`.
-func (c *EmbeddingClient) Intercept(interceptors ...Interceptor) {
-	c.inters.Embedding = append(c.inters.Embedding, interceptors...)
-}
-
-// Create returns a builder for creating a Embedding entity.
-func (c *EmbeddingClient) Create() *EmbeddingCreate {
-	mutation := newEmbeddingMutation(c.config, OpCreate)
-	return &EmbeddingCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of Embedding entities.
-func (c *EmbeddingClient) CreateBulk(builders ...*EmbeddingCreate) *EmbeddingCreateBulk {
-	return &EmbeddingCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *EmbeddingClient) MapCreateBulk(slice any, setFunc func(*EmbeddingCreate, int)) *EmbeddingCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &EmbeddingCreateBulk{err: fmt.Errorf("calling to EmbeddingClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*EmbeddingCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &EmbeddingCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for Embedding.
-func (c *EmbeddingClient) Update() *EmbeddingUpdate {
-	mutation := newEmbeddingMutation(c.config, OpUpdate)
-	return &EmbeddingUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *EmbeddingClient) UpdateOne(_m *Embedding) *EmbeddingUpdateOne {
-	mutation := newEmbeddingMutation(c.config, OpUpdateOne, withEmbedding(_m))
-	return &EmbeddingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *EmbeddingClient) UpdateOneID(id int) *EmbeddingUpdateOne {
-	mutation := newEmbeddingMutation(c.config, OpUpdateOne, withEmbeddingID(id))
-	return &EmbeddingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for Embedding.
-func (c *EmbeddingClient) Delete() *EmbeddingDelete {
-	mutation := newEmbeddingMutation(c.config, OpDelete)
-	return &EmbeddingDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *EmbeddingClient) DeleteOne(_m *Embedding) *EmbeddingDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *EmbeddingClient) DeleteOneID(id int) *EmbeddingDeleteOne {
-	builder := c.Delete().Where(embedding.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &EmbeddingDeleteOne{builder}
-}
-
-// Query returns a query builder for Embedding.
-func (c *EmbeddingClient) Query() *EmbeddingQuery {
-	return &EmbeddingQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeEmbedding},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a Embedding entity by its id.
-func (c *EmbeddingClient) Get(ctx context.Context, id int) (*Embedding, error) {
-	return c.Query().Where(embedding.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *EmbeddingClient) GetX(ctx context.Context, id int) *Embedding {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryChunk queries the chunk edge of a Embedding.
-func (c *EmbeddingClient) QueryChunk(_m *Embedding) *ChunkQuery {
-	query := (&ChunkClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(embedding.Table, embedding.FieldID, id),
-			sqlgraph.To(chunk.Table, chunk.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, embedding.ChunkTable, embedding.ChunkColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *EmbeddingClient) Hooks() []Hook {
-	return c.hooks.Embedding
-}
-
-// Interceptors returns the client interceptors.
-func (c *EmbeddingClient) Interceptors() []Interceptor {
-	return c.inters.Embedding
-}
-
-func (c *EmbeddingClient) mutate(ctx context.Context, m *EmbeddingMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&EmbeddingCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&EmbeddingUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&EmbeddingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&EmbeddingDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown Embedding mutation op: %q", m.Op())
 	}
 }
 
@@ -1073,15 +900,15 @@ func (c *QueryResultClient) QueryQuery(_m *QueryResult) *UserPromptQuery {
 	return query
 }
 
-// QueryDocument queries the document edge of a QueryResult.
-func (c *QueryResultClient) QueryDocument(_m *QueryResult) *DocumentQuery {
-	query := (&DocumentClient{config: c.config}).Query()
+// QueryChunks queries the chunks edge of a QueryResult.
+func (c *QueryResultClient) QueryChunks(_m *QueryResult) *ChunkQuery {
+	query := (&ChunkClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(queryresult.Table, queryresult.FieldID, id),
-			sqlgraph.To(document.Table, document.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, queryresult.DocumentTable, queryresult.DocumentColumn),
+			sqlgraph.To(chunk.Table, chunk.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, queryresult.ChunksTable, queryresult.ChunksPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1793,11 +1620,11 @@ func (c *UserPromptClient) mutate(ctx context.Context, m *UserPromptMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Chunk, Document, Embedding, Project, QueryResult, SecurityQuestion, Session,
-		User, UserPrompt []ent.Hook
+		Chunk, Document, Project, QueryResult, SecurityQuestion, Session, User,
+		UserPrompt []ent.Hook
 	}
 	inters struct {
-		Chunk, Document, Embedding, Project, QueryResult, SecurityQuestion, Session,
-		User, UserPrompt []ent.Interceptor
+		Chunk, Document, Project, QueryResult, SecurityQuestion, Session, User,
+		UserPrompt []ent.Interceptor
 	}
 )

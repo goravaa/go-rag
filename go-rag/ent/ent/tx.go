@@ -16,8 +16,6 @@ type Tx struct {
 	Chunk *ChunkClient
 	// Document is the client for interacting with the Document builders.
 	Document *DocumentClient
-	// Embedding is the client for interacting with the Embedding builders.
-	Embedding *EmbeddingClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
 	// QueryResult is the client for interacting with the QueryResult builders.
@@ -163,7 +161,6 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.Chunk = NewChunkClient(tx.config)
 	tx.Document = NewDocumentClient(tx.config)
-	tx.Embedding = NewEmbeddingClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
 	tx.QueryResult = NewQueryResultClient(tx.config)
 	tx.SecurityQuestion = NewSecurityQuestionClient(tx.config)

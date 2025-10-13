@@ -28,8 +28,6 @@ const (
 	EdgeProject = "project"
 	// EdgeChunks holds the string denoting the chunks edge name in mutations.
 	EdgeChunks = "chunks"
-	// EdgeQueryResults holds the string denoting the query_results edge name in mutations.
-	EdgeQueryResults = "query_results"
 	// Table holds the table name of the document in the database.
 	Table = "documents"
 	// ProjectTable is the table that holds the project relation/edge.
@@ -46,13 +44,6 @@ const (
 	ChunksInverseTable = "chunks"
 	// ChunksColumn is the table column denoting the chunks relation/edge.
 	ChunksColumn = "document_chunks"
-	// QueryResultsTable is the table that holds the query_results relation/edge.
-	QueryResultsTable = "query_results"
-	// QueryResultsInverseTable is the table name for the QueryResult entity.
-	// It exists in this package in order to avoid circular dependency with the "queryresult" package.
-	QueryResultsInverseTable = "query_results"
-	// QueryResultsColumn is the table column denoting the query_results relation/edge.
-	QueryResultsColumn = "document_query_results"
 )
 
 // Columns holds all SQL columns for document fields.
@@ -146,20 +137,6 @@ func ByChunks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newChunksStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-
-// ByQueryResultsCount orders the results by query_results count.
-func ByQueryResultsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newQueryResultsStep(), opts...)
-	}
-}
-
-// ByQueryResults orders the results by query_results terms.
-func ByQueryResults(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newQueryResultsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
 func newProjectStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -172,12 +149,5 @@ func newChunksStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ChunksInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ChunksTable, ChunksColumn),
-	)
-}
-func newQueryResultsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(QueryResultsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, QueryResultsTable, QueryResultsColumn),
 	)
 }

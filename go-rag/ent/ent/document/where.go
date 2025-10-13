@@ -436,29 +436,6 @@ func HasChunksWith(preds ...predicate.Chunk) predicate.Document {
 	})
 }
 
-// HasQueryResults applies the HasEdge predicate on the "query_results" edge.
-func HasQueryResults() predicate.Document {
-	return predicate.Document(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, QueryResultsTable, QueryResultsColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasQueryResultsWith applies the HasEdge predicate on the "query_results" edge with a given conditions (other predicates).
-func HasQueryResultsWith(preds ...predicate.QueryResult) predicate.Document {
-	return predicate.Document(func(s *sql.Selector) {
-		step := newQueryResultsStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Document) predicate.Document {
 	return predicate.Document(sql.AndPredicates(predicates...))

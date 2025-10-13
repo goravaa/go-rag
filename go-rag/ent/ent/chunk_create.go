@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"go-rag/ent/ent/chunk"
 	"go-rag/ent/ent/document"
-	"go-rag/ent/ent/embedding"
+	"go-rag/ent/ent/queryresult"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -33,6 +33,20 @@ func (_c *ChunkCreate) SetContent(v string) *ChunkCreate {
 	return _c
 }
 
+// SetContentHash sets the "content_hash" field.
+func (_c *ChunkCreate) SetContentHash(v string) *ChunkCreate {
+	_c.mutation.SetContentHash(v)
+	return _c
+}
+
+// SetNillableContentHash sets the "content_hash" field if the given value is not nil.
+func (_c *ChunkCreate) SetNillableContentHash(v *string) *ChunkCreate {
+	if v != nil {
+		_c.SetContentHash(*v)
+	}
+	return _c
+}
+
 // SetDocumentID sets the "document" edge to the Document entity by ID.
 func (_c *ChunkCreate) SetDocumentID(id int) *ChunkCreate {
 	_c.mutation.SetDocumentID(id)
@@ -52,19 +66,19 @@ func (_c *ChunkCreate) SetDocument(v *Document) *ChunkCreate {
 	return _c.SetDocumentID(v.ID)
 }
 
-// AddEmbeddingIDs adds the "embeddings" edge to the Embedding entity by IDs.
-func (_c *ChunkCreate) AddEmbeddingIDs(ids ...int) *ChunkCreate {
-	_c.mutation.AddEmbeddingIDs(ids...)
+// AddQueryResultIDs adds the "query_results" edge to the QueryResult entity by IDs.
+func (_c *ChunkCreate) AddQueryResultIDs(ids ...int) *ChunkCreate {
+	_c.mutation.AddQueryResultIDs(ids...)
 	return _c
 }
 
-// AddEmbeddings adds the "embeddings" edges to the Embedding entity.
-func (_c *ChunkCreate) AddEmbeddings(v ...*Embedding) *ChunkCreate {
+// AddQueryResults adds the "query_results" edges to the QueryResult entity.
+func (_c *ChunkCreate) AddQueryResults(v ...*QueryResult) *ChunkCreate {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddEmbeddingIDs(ids...)
+	return _c.AddQueryResultIDs(ids...)
 }
 
 // Mutation returns the ChunkMutation object of the builder.
@@ -141,6 +155,10 @@ func (_c *ChunkCreate) createSpec() (*Chunk, *sqlgraph.CreateSpec) {
 		_spec.SetField(chunk.FieldContent, field.TypeString, value)
 		_node.Content = value
 	}
+	if value, ok := _c.mutation.ContentHash(); ok {
+		_spec.SetField(chunk.FieldContentHash, field.TypeString, value)
+		_node.ContentHash = value
+	}
 	if nodes := _c.mutation.DocumentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -158,15 +176,15 @@ func (_c *ChunkCreate) createSpec() (*Chunk, *sqlgraph.CreateSpec) {
 		_node.document_chunks = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.EmbeddingsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.QueryResultsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   chunk.EmbeddingsTable,
-			Columns: []string{chunk.EmbeddingsColumn},
+			Table:   chunk.QueryResultsTable,
+			Columns: chunk.QueryResultsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(embedding.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

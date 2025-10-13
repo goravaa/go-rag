@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"go-rag/ent/ent/chunk"
 	"go-rag/ent/ent/document"
-	"go-rag/ent/ent/embedding"
 	"go-rag/ent/ent/predicate"
 	"go-rag/ent/ent/project"
 	"go-rag/ent/ent/queryresult"
@@ -35,7 +34,6 @@ const (
 	// Node types.
 	TypeChunk            = "Chunk"
 	TypeDocument         = "Document"
-	TypeEmbedding        = "Embedding"
 	TypeProject          = "Project"
 	TypeQueryResult      = "QueryResult"
 	TypeSecurityQuestion = "SecurityQuestion"
@@ -47,21 +45,22 @@ const (
 // ChunkMutation represents an operation that mutates the Chunk nodes in the graph.
 type ChunkMutation struct {
 	config
-	op                Op
-	typ               string
-	id                *int
-	index             *int
-	addindex          *int
-	content           *string
-	clearedFields     map[string]struct{}
-	document          *int
-	cleareddocument   bool
-	embeddings        map[int]struct{}
-	removedembeddings map[int]struct{}
-	clearedembeddings bool
-	done              bool
-	oldValue          func(context.Context) (*Chunk, error)
-	predicates        []predicate.Chunk
+	op                   Op
+	typ                  string
+	id                   *int
+	index                *int
+	addindex             *int
+	content              *string
+	content_hash         *string
+	clearedFields        map[string]struct{}
+	document             *int
+	cleareddocument      bool
+	query_results        map[int]struct{}
+	removedquery_results map[int]struct{}
+	clearedquery_results bool
+	done                 bool
+	oldValue             func(context.Context) (*Chunk, error)
+	predicates           []predicate.Chunk
 }
 
 var _ ent.Mutation = (*ChunkMutation)(nil)
@@ -254,6 +253,55 @@ func (m *ChunkMutation) ResetContent() {
 	m.content = nil
 }
 
+// SetContentHash sets the "content_hash" field.
+func (m *ChunkMutation) SetContentHash(s string) {
+	m.content_hash = &s
+}
+
+// ContentHash returns the value of the "content_hash" field in the mutation.
+func (m *ChunkMutation) ContentHash() (r string, exists bool) {
+	v := m.content_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldContentHash returns the old "content_hash" field's value of the Chunk entity.
+// If the Chunk object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChunkMutation) OldContentHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldContentHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldContentHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldContentHash: %w", err)
+	}
+	return oldValue.ContentHash, nil
+}
+
+// ClearContentHash clears the value of the "content_hash" field.
+func (m *ChunkMutation) ClearContentHash() {
+	m.content_hash = nil
+	m.clearedFields[chunk.FieldContentHash] = struct{}{}
+}
+
+// ContentHashCleared returns if the "content_hash" field was cleared in this mutation.
+func (m *ChunkMutation) ContentHashCleared() bool {
+	_, ok := m.clearedFields[chunk.FieldContentHash]
+	return ok
+}
+
+// ResetContentHash resets all changes to the "content_hash" field.
+func (m *ChunkMutation) ResetContentHash() {
+	m.content_hash = nil
+	delete(m.clearedFields, chunk.FieldContentHash)
+}
+
 // SetDocumentID sets the "document" edge to the Document entity by id.
 func (m *ChunkMutation) SetDocumentID(id int) {
 	m.document = &id
@@ -293,58 +341,58 @@ func (m *ChunkMutation) ResetDocument() {
 	m.cleareddocument = false
 }
 
-// AddEmbeddingIDs adds the "embeddings" edge to the Embedding entity by ids.
-func (m *ChunkMutation) AddEmbeddingIDs(ids ...int) {
-	if m.embeddings == nil {
-		m.embeddings = make(map[int]struct{})
+// AddQueryResultIDs adds the "query_results" edge to the QueryResult entity by ids.
+func (m *ChunkMutation) AddQueryResultIDs(ids ...int) {
+	if m.query_results == nil {
+		m.query_results = make(map[int]struct{})
 	}
 	for i := range ids {
-		m.embeddings[ids[i]] = struct{}{}
+		m.query_results[ids[i]] = struct{}{}
 	}
 }
 
-// ClearEmbeddings clears the "embeddings" edge to the Embedding entity.
-func (m *ChunkMutation) ClearEmbeddings() {
-	m.clearedembeddings = true
+// ClearQueryResults clears the "query_results" edge to the QueryResult entity.
+func (m *ChunkMutation) ClearQueryResults() {
+	m.clearedquery_results = true
 }
 
-// EmbeddingsCleared reports if the "embeddings" edge to the Embedding entity was cleared.
-func (m *ChunkMutation) EmbeddingsCleared() bool {
-	return m.clearedembeddings
+// QueryResultsCleared reports if the "query_results" edge to the QueryResult entity was cleared.
+func (m *ChunkMutation) QueryResultsCleared() bool {
+	return m.clearedquery_results
 }
 
-// RemoveEmbeddingIDs removes the "embeddings" edge to the Embedding entity by IDs.
-func (m *ChunkMutation) RemoveEmbeddingIDs(ids ...int) {
-	if m.removedembeddings == nil {
-		m.removedembeddings = make(map[int]struct{})
+// RemoveQueryResultIDs removes the "query_results" edge to the QueryResult entity by IDs.
+func (m *ChunkMutation) RemoveQueryResultIDs(ids ...int) {
+	if m.removedquery_results == nil {
+		m.removedquery_results = make(map[int]struct{})
 	}
 	for i := range ids {
-		delete(m.embeddings, ids[i])
-		m.removedembeddings[ids[i]] = struct{}{}
+		delete(m.query_results, ids[i])
+		m.removedquery_results[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedEmbeddings returns the removed IDs of the "embeddings" edge to the Embedding entity.
-func (m *ChunkMutation) RemovedEmbeddingsIDs() (ids []int) {
-	for id := range m.removedembeddings {
+// RemovedQueryResults returns the removed IDs of the "query_results" edge to the QueryResult entity.
+func (m *ChunkMutation) RemovedQueryResultsIDs() (ids []int) {
+	for id := range m.removedquery_results {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// EmbeddingsIDs returns the "embeddings" edge IDs in the mutation.
-func (m *ChunkMutation) EmbeddingsIDs() (ids []int) {
-	for id := range m.embeddings {
+// QueryResultsIDs returns the "query_results" edge IDs in the mutation.
+func (m *ChunkMutation) QueryResultsIDs() (ids []int) {
+	for id := range m.query_results {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetEmbeddings resets all changes to the "embeddings" edge.
-func (m *ChunkMutation) ResetEmbeddings() {
-	m.embeddings = nil
-	m.clearedembeddings = false
-	m.removedembeddings = nil
+// ResetQueryResults resets all changes to the "query_results" edge.
+func (m *ChunkMutation) ResetQueryResults() {
+	m.query_results = nil
+	m.clearedquery_results = false
+	m.removedquery_results = nil
 }
 
 // Where appends a list predicates to the ChunkMutation builder.
@@ -381,12 +429,15 @@ func (m *ChunkMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ChunkMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 3)
 	if m.index != nil {
 		fields = append(fields, chunk.FieldIndex)
 	}
 	if m.content != nil {
 		fields = append(fields, chunk.FieldContent)
+	}
+	if m.content_hash != nil {
+		fields = append(fields, chunk.FieldContentHash)
 	}
 	return fields
 }
@@ -400,6 +451,8 @@ func (m *ChunkMutation) Field(name string) (ent.Value, bool) {
 		return m.Index()
 	case chunk.FieldContent:
 		return m.Content()
+	case chunk.FieldContentHash:
+		return m.ContentHash()
 	}
 	return nil, false
 }
@@ -413,6 +466,8 @@ func (m *ChunkMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldIndex(ctx)
 	case chunk.FieldContent:
 		return m.OldContent(ctx)
+	case chunk.FieldContentHash:
+		return m.OldContentHash(ctx)
 	}
 	return nil, fmt.Errorf("unknown Chunk field %s", name)
 }
@@ -435,6 +490,13 @@ func (m *ChunkMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetContent(v)
+		return nil
+	case chunk.FieldContentHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetContentHash(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Chunk field %s", name)
@@ -480,7 +542,11 @@ func (m *ChunkMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *ChunkMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(chunk.FieldContentHash) {
+		fields = append(fields, chunk.FieldContentHash)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -493,6 +559,11 @@ func (m *ChunkMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *ChunkMutation) ClearField(name string) error {
+	switch name {
+	case chunk.FieldContentHash:
+		m.ClearContentHash()
+		return nil
+	}
 	return fmt.Errorf("unknown Chunk nullable field %s", name)
 }
 
@@ -506,6 +577,9 @@ func (m *ChunkMutation) ResetField(name string) error {
 	case chunk.FieldContent:
 		m.ResetContent()
 		return nil
+	case chunk.FieldContentHash:
+		m.ResetContentHash()
+		return nil
 	}
 	return fmt.Errorf("unknown Chunk field %s", name)
 }
@@ -516,8 +590,8 @@ func (m *ChunkMutation) AddedEdges() []string {
 	if m.document != nil {
 		edges = append(edges, chunk.EdgeDocument)
 	}
-	if m.embeddings != nil {
-		edges = append(edges, chunk.EdgeEmbeddings)
+	if m.query_results != nil {
+		edges = append(edges, chunk.EdgeQueryResults)
 	}
 	return edges
 }
@@ -530,9 +604,9 @@ func (m *ChunkMutation) AddedIDs(name string) []ent.Value {
 		if id := m.document; id != nil {
 			return []ent.Value{*id}
 		}
-	case chunk.EdgeEmbeddings:
-		ids := make([]ent.Value, 0, len(m.embeddings))
-		for id := range m.embeddings {
+	case chunk.EdgeQueryResults:
+		ids := make([]ent.Value, 0, len(m.query_results))
+		for id := range m.query_results {
 			ids = append(ids, id)
 		}
 		return ids
@@ -543,8 +617,8 @@ func (m *ChunkMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ChunkMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.removedembeddings != nil {
-		edges = append(edges, chunk.EdgeEmbeddings)
+	if m.removedquery_results != nil {
+		edges = append(edges, chunk.EdgeQueryResults)
 	}
 	return edges
 }
@@ -553,9 +627,9 @@ func (m *ChunkMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ChunkMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case chunk.EdgeEmbeddings:
-		ids := make([]ent.Value, 0, len(m.removedembeddings))
-		for id := range m.removedembeddings {
+	case chunk.EdgeQueryResults:
+		ids := make([]ent.Value, 0, len(m.removedquery_results))
+		for id := range m.removedquery_results {
 			ids = append(ids, id)
 		}
 		return ids
@@ -569,8 +643,8 @@ func (m *ChunkMutation) ClearedEdges() []string {
 	if m.cleareddocument {
 		edges = append(edges, chunk.EdgeDocument)
 	}
-	if m.clearedembeddings {
-		edges = append(edges, chunk.EdgeEmbeddings)
+	if m.clearedquery_results {
+		edges = append(edges, chunk.EdgeQueryResults)
 	}
 	return edges
 }
@@ -581,8 +655,8 @@ func (m *ChunkMutation) EdgeCleared(name string) bool {
 	switch name {
 	case chunk.EdgeDocument:
 		return m.cleareddocument
-	case chunk.EdgeEmbeddings:
-		return m.clearedembeddings
+	case chunk.EdgeQueryResults:
+		return m.clearedquery_results
 	}
 	return false
 }
@@ -605,8 +679,8 @@ func (m *ChunkMutation) ResetEdge(name string) error {
 	case chunk.EdgeDocument:
 		m.ResetDocument()
 		return nil
-	case chunk.EdgeEmbeddings:
-		m.ResetEmbeddings()
+	case chunk.EdgeQueryResults:
+		m.ResetQueryResults()
 		return nil
 	}
 	return fmt.Errorf("unknown Chunk edge %s", name)
@@ -615,26 +689,23 @@ func (m *ChunkMutation) ResetEdge(name string) error {
 // DocumentMutation represents an operation that mutates the Document nodes in the graph.
 type DocumentMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *int
-	name                 *string
-	content              *string
-	content_hash         *string
-	status               *string
-	created_at           *time.Time
-	clearedFields        map[string]struct{}
-	project              *int
-	clearedproject       bool
-	chunks               map[int]struct{}
-	removedchunks        map[int]struct{}
-	clearedchunks        bool
-	query_results        map[int]struct{}
-	removedquery_results map[int]struct{}
-	clearedquery_results bool
-	done                 bool
-	oldValue             func(context.Context) (*Document, error)
-	predicates           []predicate.Document
+	op             Op
+	typ            string
+	id             *int
+	name           *string
+	content        *string
+	content_hash   *string
+	status         *string
+	created_at     *time.Time
+	clearedFields  map[string]struct{}
+	project        *int
+	clearedproject bool
+	chunks         map[int]struct{}
+	removedchunks  map[int]struct{}
+	clearedchunks  bool
+	done           bool
+	oldValue       func(context.Context) (*Document, error)
+	predicates     []predicate.Document
 }
 
 var _ ent.Mutation = (*DocumentMutation)(nil)
@@ -1021,60 +1092,6 @@ func (m *DocumentMutation) ResetChunks() {
 	m.removedchunks = nil
 }
 
-// AddQueryResultIDs adds the "query_results" edge to the QueryResult entity by ids.
-func (m *DocumentMutation) AddQueryResultIDs(ids ...int) {
-	if m.query_results == nil {
-		m.query_results = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.query_results[ids[i]] = struct{}{}
-	}
-}
-
-// ClearQueryResults clears the "query_results" edge to the QueryResult entity.
-func (m *DocumentMutation) ClearQueryResults() {
-	m.clearedquery_results = true
-}
-
-// QueryResultsCleared reports if the "query_results" edge to the QueryResult entity was cleared.
-func (m *DocumentMutation) QueryResultsCleared() bool {
-	return m.clearedquery_results
-}
-
-// RemoveQueryResultIDs removes the "query_results" edge to the QueryResult entity by IDs.
-func (m *DocumentMutation) RemoveQueryResultIDs(ids ...int) {
-	if m.removedquery_results == nil {
-		m.removedquery_results = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.query_results, ids[i])
-		m.removedquery_results[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedQueryResults returns the removed IDs of the "query_results" edge to the QueryResult entity.
-func (m *DocumentMutation) RemovedQueryResultsIDs() (ids []int) {
-	for id := range m.removedquery_results {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// QueryResultsIDs returns the "query_results" edge IDs in the mutation.
-func (m *DocumentMutation) QueryResultsIDs() (ids []int) {
-	for id := range m.query_results {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetQueryResults resets all changes to the "query_results" edge.
-func (m *DocumentMutation) ResetQueryResults() {
-	m.query_results = nil
-	m.clearedquery_results = false
-	m.removedquery_results = nil
-}
-
 // Where appends a list predicates to the DocumentMutation builder.
 func (m *DocumentMutation) Where(ps ...predicate.Document) {
 	m.predicates = append(m.predicates, ps...)
@@ -1285,15 +1302,12 @@ func (m *DocumentMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DocumentMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.project != nil {
 		edges = append(edges, document.EdgeProject)
 	}
 	if m.chunks != nil {
 		edges = append(edges, document.EdgeChunks)
-	}
-	if m.query_results != nil {
-		edges = append(edges, document.EdgeQueryResults)
 	}
 	return edges
 }
@@ -1312,24 +1326,15 @@ func (m *DocumentMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case document.EdgeQueryResults:
-		ids := make([]ent.Value, 0, len(m.query_results))
-		for id := range m.query_results {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *DocumentMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.removedchunks != nil {
 		edges = append(edges, document.EdgeChunks)
-	}
-	if m.removedquery_results != nil {
-		edges = append(edges, document.EdgeQueryResults)
 	}
 	return edges
 }
@@ -1344,27 +1349,18 @@ func (m *DocumentMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case document.EdgeQueryResults:
-		ids := make([]ent.Value, 0, len(m.removedquery_results))
-		for id := range m.removedquery_results {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DocumentMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.clearedproject {
 		edges = append(edges, document.EdgeProject)
 	}
 	if m.clearedchunks {
 		edges = append(edges, document.EdgeChunks)
-	}
-	if m.clearedquery_results {
-		edges = append(edges, document.EdgeQueryResults)
 	}
 	return edges
 }
@@ -1377,8 +1373,6 @@ func (m *DocumentMutation) EdgeCleared(name string) bool {
 		return m.clearedproject
 	case document.EdgeChunks:
 		return m.clearedchunks
-	case document.EdgeQueryResults:
-		return m.clearedquery_results
 	}
 	return false
 }
@@ -1404,420 +1398,8 @@ func (m *DocumentMutation) ResetEdge(name string) error {
 	case document.EdgeChunks:
 		m.ResetChunks()
 		return nil
-	case document.EdgeQueryResults:
-		m.ResetQueryResults()
-		return nil
 	}
 	return fmt.Errorf("unknown Document edge %s", name)
-}
-
-// EmbeddingMutation represents an operation that mutates the Embedding nodes in the graph.
-type EmbeddingMutation struct {
-	config
-	op            Op
-	typ           string
-	id            *int
-	vector        *[]float32
-	appendvector  []float32
-	clearedFields map[string]struct{}
-	chunk         *int
-	clearedchunk  bool
-	done          bool
-	oldValue      func(context.Context) (*Embedding, error)
-	predicates    []predicate.Embedding
-}
-
-var _ ent.Mutation = (*EmbeddingMutation)(nil)
-
-// embeddingOption allows management of the mutation configuration using functional options.
-type embeddingOption func(*EmbeddingMutation)
-
-// newEmbeddingMutation creates new mutation for the Embedding entity.
-func newEmbeddingMutation(c config, op Op, opts ...embeddingOption) *EmbeddingMutation {
-	m := &EmbeddingMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeEmbedding,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withEmbeddingID sets the ID field of the mutation.
-func withEmbeddingID(id int) embeddingOption {
-	return func(m *EmbeddingMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *Embedding
-		)
-		m.oldValue = func(ctx context.Context) (*Embedding, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().Embedding.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withEmbedding sets the old Embedding of the mutation.
-func withEmbedding(node *Embedding) embeddingOption {
-	return func(m *EmbeddingMutation) {
-		m.oldValue = func(context.Context) (*Embedding, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m EmbeddingMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m EmbeddingMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *EmbeddingMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *EmbeddingMutation) IDs(ctx context.Context) ([]int, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []int{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().Embedding.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetVector sets the "vector" field.
-func (m *EmbeddingMutation) SetVector(f []float32) {
-	m.vector = &f
-	m.appendvector = nil
-}
-
-// Vector returns the value of the "vector" field in the mutation.
-func (m *EmbeddingMutation) Vector() (r []float32, exists bool) {
-	v := m.vector
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldVector returns the old "vector" field's value of the Embedding entity.
-// If the Embedding object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *EmbeddingMutation) OldVector(ctx context.Context) (v []float32, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldVector is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldVector requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldVector: %w", err)
-	}
-	return oldValue.Vector, nil
-}
-
-// AppendVector adds f to the "vector" field.
-func (m *EmbeddingMutation) AppendVector(f []float32) {
-	m.appendvector = append(m.appendvector, f...)
-}
-
-// AppendedVector returns the list of values that were appended to the "vector" field in this mutation.
-func (m *EmbeddingMutation) AppendedVector() ([]float32, bool) {
-	if len(m.appendvector) == 0 {
-		return nil, false
-	}
-	return m.appendvector, true
-}
-
-// ResetVector resets all changes to the "vector" field.
-func (m *EmbeddingMutation) ResetVector() {
-	m.vector = nil
-	m.appendvector = nil
-}
-
-// SetChunkID sets the "chunk" edge to the Chunk entity by id.
-func (m *EmbeddingMutation) SetChunkID(id int) {
-	m.chunk = &id
-}
-
-// ClearChunk clears the "chunk" edge to the Chunk entity.
-func (m *EmbeddingMutation) ClearChunk() {
-	m.clearedchunk = true
-}
-
-// ChunkCleared reports if the "chunk" edge to the Chunk entity was cleared.
-func (m *EmbeddingMutation) ChunkCleared() bool {
-	return m.clearedchunk
-}
-
-// ChunkID returns the "chunk" edge ID in the mutation.
-func (m *EmbeddingMutation) ChunkID() (id int, exists bool) {
-	if m.chunk != nil {
-		return *m.chunk, true
-	}
-	return
-}
-
-// ChunkIDs returns the "chunk" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ChunkID instead. It exists only for internal usage by the builders.
-func (m *EmbeddingMutation) ChunkIDs() (ids []int) {
-	if id := m.chunk; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetChunk resets all changes to the "chunk" edge.
-func (m *EmbeddingMutation) ResetChunk() {
-	m.chunk = nil
-	m.clearedchunk = false
-}
-
-// Where appends a list predicates to the EmbeddingMutation builder.
-func (m *EmbeddingMutation) Where(ps ...predicate.Embedding) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the EmbeddingMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *EmbeddingMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.Embedding, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *EmbeddingMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *EmbeddingMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (Embedding).
-func (m *EmbeddingMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *EmbeddingMutation) Fields() []string {
-	fields := make([]string, 0, 1)
-	if m.vector != nil {
-		fields = append(fields, embedding.FieldVector)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *EmbeddingMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case embedding.FieldVector:
-		return m.Vector()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *EmbeddingMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case embedding.FieldVector:
-		return m.OldVector(ctx)
-	}
-	return nil, fmt.Errorf("unknown Embedding field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *EmbeddingMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case embedding.FieldVector:
-		v, ok := value.([]float32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetVector(v)
-		return nil
-	}
-	return fmt.Errorf("unknown Embedding field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *EmbeddingMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *EmbeddingMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *EmbeddingMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown Embedding numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *EmbeddingMutation) ClearedFields() []string {
-	return nil
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *EmbeddingMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *EmbeddingMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown Embedding nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *EmbeddingMutation) ResetField(name string) error {
-	switch name {
-	case embedding.FieldVector:
-		m.ResetVector()
-		return nil
-	}
-	return fmt.Errorf("unknown Embedding field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *EmbeddingMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.chunk != nil {
-		edges = append(edges, embedding.EdgeChunk)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *EmbeddingMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case embedding.EdgeChunk:
-		if id := m.chunk; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *EmbeddingMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *EmbeddingMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *EmbeddingMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedchunk {
-		edges = append(edges, embedding.EdgeChunk)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *EmbeddingMutation) EdgeCleared(name string) bool {
-	switch name {
-	case embedding.EdgeChunk:
-		return m.clearedchunk
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *EmbeddingMutation) ClearEdge(name string) error {
-	switch name {
-	case embedding.EdgeChunk:
-		m.ClearChunk()
-		return nil
-	}
-	return fmt.Errorf("unknown Embedding unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *EmbeddingMutation) ResetEdge(name string) error {
-	switch name {
-	case embedding.EdgeChunk:
-		m.ResetChunk()
-		return nil
-	}
-	return fmt.Errorf("unknown Embedding edge %s", name)
 }
 
 // ProjectMutation represents an operation that mutates the Project nodes in the graph.
@@ -2525,8 +2107,9 @@ type QueryResultMutation struct {
 	clearedFields   map[string]struct{}
 	query           *int
 	clearedquery    bool
-	document        *int
-	cleareddocument bool
+	chunks          map[int]struct{}
+	removedchunks   map[int]struct{}
+	clearedchunks   bool
 	done            bool
 	oldValue        func(context.Context) (*QueryResult, error)
 	predicates      []predicate.QueryResult
@@ -2817,43 +2400,58 @@ func (m *QueryResultMutation) ResetQuery() {
 	m.clearedquery = false
 }
 
-// SetDocumentID sets the "document" edge to the Document entity by id.
-func (m *QueryResultMutation) SetDocumentID(id int) {
-	m.document = &id
+// AddChunkIDs adds the "chunks" edge to the Chunk entity by ids.
+func (m *QueryResultMutation) AddChunkIDs(ids ...int) {
+	if m.chunks == nil {
+		m.chunks = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.chunks[ids[i]] = struct{}{}
+	}
 }
 
-// ClearDocument clears the "document" edge to the Document entity.
-func (m *QueryResultMutation) ClearDocument() {
-	m.cleareddocument = true
+// ClearChunks clears the "chunks" edge to the Chunk entity.
+func (m *QueryResultMutation) ClearChunks() {
+	m.clearedchunks = true
 }
 
-// DocumentCleared reports if the "document" edge to the Document entity was cleared.
-func (m *QueryResultMutation) DocumentCleared() bool {
-	return m.cleareddocument
+// ChunksCleared reports if the "chunks" edge to the Chunk entity was cleared.
+func (m *QueryResultMutation) ChunksCleared() bool {
+	return m.clearedchunks
 }
 
-// DocumentID returns the "document" edge ID in the mutation.
-func (m *QueryResultMutation) DocumentID() (id int, exists bool) {
-	if m.document != nil {
-		return *m.document, true
+// RemoveChunkIDs removes the "chunks" edge to the Chunk entity by IDs.
+func (m *QueryResultMutation) RemoveChunkIDs(ids ...int) {
+	if m.removedchunks == nil {
+		m.removedchunks = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.chunks, ids[i])
+		m.removedchunks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedChunks returns the removed IDs of the "chunks" edge to the Chunk entity.
+func (m *QueryResultMutation) RemovedChunksIDs() (ids []int) {
+	for id := range m.removedchunks {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// DocumentIDs returns the "document" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// DocumentID instead. It exists only for internal usage by the builders.
-func (m *QueryResultMutation) DocumentIDs() (ids []int) {
-	if id := m.document; id != nil {
-		ids = append(ids, *id)
+// ChunksIDs returns the "chunks" edge IDs in the mutation.
+func (m *QueryResultMutation) ChunksIDs() (ids []int) {
+	for id := range m.chunks {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetDocument resets all changes to the "document" edge.
-func (m *QueryResultMutation) ResetDocument() {
-	m.document = nil
-	m.cleareddocument = false
+// ResetChunks resets all changes to the "chunks" edge.
+func (m *QueryResultMutation) ResetChunks() {
+	m.chunks = nil
+	m.clearedchunks = false
+	m.removedchunks = nil
 }
 
 // Where appends a list predicates to the QueryResultMutation builder.
@@ -3054,8 +2652,8 @@ func (m *QueryResultMutation) AddedEdges() []string {
 	if m.query != nil {
 		edges = append(edges, queryresult.EdgeQuery)
 	}
-	if m.document != nil {
-		edges = append(edges, queryresult.EdgeDocument)
+	if m.chunks != nil {
+		edges = append(edges, queryresult.EdgeChunks)
 	}
 	return edges
 }
@@ -3068,10 +2666,12 @@ func (m *QueryResultMutation) AddedIDs(name string) []ent.Value {
 		if id := m.query; id != nil {
 			return []ent.Value{*id}
 		}
-	case queryresult.EdgeDocument:
-		if id := m.document; id != nil {
-			return []ent.Value{*id}
+	case queryresult.EdgeChunks:
+		ids := make([]ent.Value, 0, len(m.chunks))
+		for id := range m.chunks {
+			ids = append(ids, id)
 		}
+		return ids
 	}
 	return nil
 }
@@ -3079,12 +2679,23 @@ func (m *QueryResultMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *QueryResultMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
+	if m.removedchunks != nil {
+		edges = append(edges, queryresult.EdgeChunks)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *QueryResultMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case queryresult.EdgeChunks:
+		ids := make([]ent.Value, 0, len(m.removedchunks))
+		for id := range m.removedchunks {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
@@ -3094,8 +2705,8 @@ func (m *QueryResultMutation) ClearedEdges() []string {
 	if m.clearedquery {
 		edges = append(edges, queryresult.EdgeQuery)
 	}
-	if m.cleareddocument {
-		edges = append(edges, queryresult.EdgeDocument)
+	if m.clearedchunks {
+		edges = append(edges, queryresult.EdgeChunks)
 	}
 	return edges
 }
@@ -3106,8 +2717,8 @@ func (m *QueryResultMutation) EdgeCleared(name string) bool {
 	switch name {
 	case queryresult.EdgeQuery:
 		return m.clearedquery
-	case queryresult.EdgeDocument:
-		return m.cleareddocument
+	case queryresult.EdgeChunks:
+		return m.clearedchunks
 	}
 	return false
 }
@@ -3118,9 +2729,6 @@ func (m *QueryResultMutation) ClearEdge(name string) error {
 	switch name {
 	case queryresult.EdgeQuery:
 		m.ClearQuery()
-		return nil
-	case queryresult.EdgeDocument:
-		m.ClearDocument()
 		return nil
 	}
 	return fmt.Errorf("unknown QueryResult unique edge %s", name)
@@ -3133,8 +2741,8 @@ func (m *QueryResultMutation) ResetEdge(name string) error {
 	case queryresult.EdgeQuery:
 		m.ResetQuery()
 		return nil
-	case queryresult.EdgeDocument:
-		m.ResetDocument()
+	case queryresult.EdgeChunks:
+		m.ResetChunks()
 		return nil
 	}
 	return fmt.Errorf("unknown QueryResult edge %s", name)

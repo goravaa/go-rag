@@ -10,7 +10,6 @@ import (
 	"go-rag/ent/ent/document"
 	"go-rag/ent/ent/predicate"
 	"go-rag/ent/ent/project"
-	"go-rag/ent/ent/queryresult"
 	"math"
 
 	"entgo.io/ent"
@@ -22,14 +21,13 @@ import (
 // DocumentQuery is the builder for querying Document entities.
 type DocumentQuery struct {
 	config
-	ctx              *QueryContext
-	order            []document.OrderOption
-	inters           []Interceptor
-	predicates       []predicate.Document
-	withProject      *ProjectQuery
-	withChunks       *ChunkQuery
-	withQueryResults *QueryResultQuery
-	withFKs          bool
+	ctx         *QueryContext
+	order       []document.OrderOption
+	inters      []Interceptor
+	predicates  []predicate.Document
+	withProject *ProjectQuery
+	withChunks  *ChunkQuery
+	withFKs     bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -103,28 +101,6 @@ func (_q *DocumentQuery) QueryChunks() *ChunkQuery {
 			sqlgraph.From(document.Table, document.FieldID, selector),
 			sqlgraph.To(chunk.Table, chunk.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, document.ChunksTable, document.ChunksColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryQueryResults chains the current query on the "query_results" edge.
-func (_q *DocumentQuery) QueryQueryResults() *QueryResultQuery {
-	query := (&QueryResultClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(document.Table, document.FieldID, selector),
-			sqlgraph.To(queryresult.Table, queryresult.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, document.QueryResultsTable, document.QueryResultsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -319,14 +295,13 @@ func (_q *DocumentQuery) Clone() *DocumentQuery {
 		return nil
 	}
 	return &DocumentQuery{
-		config:           _q.config,
-		ctx:              _q.ctx.Clone(),
-		order:            append([]document.OrderOption{}, _q.order...),
-		inters:           append([]Interceptor{}, _q.inters...),
-		predicates:       append([]predicate.Document{}, _q.predicates...),
-		withProject:      _q.withProject.Clone(),
-		withChunks:       _q.withChunks.Clone(),
-		withQueryResults: _q.withQueryResults.Clone(),
+		config:      _q.config,
+		ctx:         _q.ctx.Clone(),
+		order:       append([]document.OrderOption{}, _q.order...),
+		inters:      append([]Interceptor{}, _q.inters...),
+		predicates:  append([]predicate.Document{}, _q.predicates...),
+		withProject: _q.withProject.Clone(),
+		withChunks:  _q.withChunks.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -352,17 +327,6 @@ func (_q *DocumentQuery) WithChunks(opts ...func(*ChunkQuery)) *DocumentQuery {
 		opt(query)
 	}
 	_q.withChunks = query
-	return _q
-}
-
-// WithQueryResults tells the query-builder to eager-load the nodes that are connected to
-// the "query_results" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *DocumentQuery) WithQueryResults(opts ...func(*QueryResultQuery)) *DocumentQuery {
-	query := (&QueryResultClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withQueryResults = query
 	return _q
 }
 
@@ -445,10 +409,9 @@ func (_q *DocumentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Doc
 		nodes       = []*Document{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [2]bool{
 			_q.withProject != nil,
 			_q.withChunks != nil,
-			_q.withQueryResults != nil,
 		}
 	)
 	if _q.withProject != nil {
@@ -485,13 +448,6 @@ func (_q *DocumentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Doc
 		if err := _q.loadChunks(ctx, query, nodes,
 			func(n *Document) { n.Edges.Chunks = []*Chunk{} },
 			func(n *Document, e *Chunk) { n.Edges.Chunks = append(n.Edges.Chunks, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withQueryResults; query != nil {
-		if err := _q.loadQueryResults(ctx, query, nodes,
-			func(n *Document) { n.Edges.QueryResults = []*QueryResult{} },
-			func(n *Document, e *QueryResult) { n.Edges.QueryResults = append(n.Edges.QueryResults, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -556,37 +512,6 @@ func (_q *DocumentQuery) loadChunks(ctx context.Context, query *ChunkQuery, node
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "document_chunks" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
-func (_q *DocumentQuery) loadQueryResults(ctx context.Context, query *QueryResultQuery, nodes []*Document, init func(*Document), assign func(*Document, *QueryResult)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*Document)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	query.withFKs = true
-	query.Where(predicate.QueryResult(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(document.QueryResultsColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.document_query_results
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "document_query_results" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "document_query_results" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

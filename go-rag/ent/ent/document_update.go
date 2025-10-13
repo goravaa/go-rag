@@ -10,7 +10,6 @@ import (
 	"go-rag/ent/ent/document"
 	"go-rag/ent/ent/predicate"
 	"go-rag/ent/ent/project"
-	"go-rag/ent/ent/queryresult"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -141,21 +140,6 @@ func (_u *DocumentUpdate) AddChunks(v ...*Chunk) *DocumentUpdate {
 	return _u.AddChunkIDs(ids...)
 }
 
-// AddQueryResultIDs adds the "query_results" edge to the QueryResult entity by IDs.
-func (_u *DocumentUpdate) AddQueryResultIDs(ids ...int) *DocumentUpdate {
-	_u.mutation.AddQueryResultIDs(ids...)
-	return _u
-}
-
-// AddQueryResults adds the "query_results" edges to the QueryResult entity.
-func (_u *DocumentUpdate) AddQueryResults(v ...*QueryResult) *DocumentUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddQueryResultIDs(ids...)
-}
-
 // Mutation returns the DocumentMutation object of the builder.
 func (_u *DocumentUpdate) Mutation() *DocumentMutation {
 	return _u.mutation
@@ -186,27 +170,6 @@ func (_u *DocumentUpdate) RemoveChunks(v ...*Chunk) *DocumentUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveChunkIDs(ids...)
-}
-
-// ClearQueryResults clears all "query_results" edges to the QueryResult entity.
-func (_u *DocumentUpdate) ClearQueryResults() *DocumentUpdate {
-	_u.mutation.ClearQueryResults()
-	return _u
-}
-
-// RemoveQueryResultIDs removes the "query_results" edge to QueryResult entities by IDs.
-func (_u *DocumentUpdate) RemoveQueryResultIDs(ids ...int) *DocumentUpdate {
-	_u.mutation.RemoveQueryResultIDs(ids...)
-	return _u
-}
-
-// RemoveQueryResults removes "query_results" edges to QueryResult entities.
-func (_u *DocumentUpdate) RemoveQueryResults(v ...*QueryResult) *DocumentUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveQueryResultIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -330,51 +293,6 @@ func (_u *DocumentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(chunk.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.QueryResultsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   document.QueryResultsTable,
-			Columns: []string{document.QueryResultsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedQueryResultsIDs(); len(nodes) > 0 && !_u.mutation.QueryResultsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   document.QueryResultsTable,
-			Columns: []string{document.QueryResultsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.QueryResultsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   document.QueryResultsTable,
-			Columns: []string{document.QueryResultsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -512,21 +430,6 @@ func (_u *DocumentUpdateOne) AddChunks(v ...*Chunk) *DocumentUpdateOne {
 	return _u.AddChunkIDs(ids...)
 }
 
-// AddQueryResultIDs adds the "query_results" edge to the QueryResult entity by IDs.
-func (_u *DocumentUpdateOne) AddQueryResultIDs(ids ...int) *DocumentUpdateOne {
-	_u.mutation.AddQueryResultIDs(ids...)
-	return _u
-}
-
-// AddQueryResults adds the "query_results" edges to the QueryResult entity.
-func (_u *DocumentUpdateOne) AddQueryResults(v ...*QueryResult) *DocumentUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddQueryResultIDs(ids...)
-}
-
 // Mutation returns the DocumentMutation object of the builder.
 func (_u *DocumentUpdateOne) Mutation() *DocumentMutation {
 	return _u.mutation
@@ -557,27 +460,6 @@ func (_u *DocumentUpdateOne) RemoveChunks(v ...*Chunk) *DocumentUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveChunkIDs(ids...)
-}
-
-// ClearQueryResults clears all "query_results" edges to the QueryResult entity.
-func (_u *DocumentUpdateOne) ClearQueryResults() *DocumentUpdateOne {
-	_u.mutation.ClearQueryResults()
-	return _u
-}
-
-// RemoveQueryResultIDs removes the "query_results" edge to QueryResult entities by IDs.
-func (_u *DocumentUpdateOne) RemoveQueryResultIDs(ids ...int) *DocumentUpdateOne {
-	_u.mutation.RemoveQueryResultIDs(ids...)
-	return _u
-}
-
-// RemoveQueryResults removes "query_results" edges to QueryResult entities.
-func (_u *DocumentUpdateOne) RemoveQueryResults(v ...*QueryResult) *DocumentUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveQueryResultIDs(ids...)
 }
 
 // Where appends a list predicates to the DocumentUpdate builder.
@@ -731,51 +613,6 @@ func (_u *DocumentUpdateOne) sqlSave(ctx context.Context) (_node *Document, err 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(chunk.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.QueryResultsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   document.QueryResultsTable,
-			Columns: []string{document.QueryResultsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedQueryResultsIDs(); len(nodes) > 0 && !_u.mutation.QueryResultsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   document.QueryResultsTable,
-			Columns: []string{document.QueryResultsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.QueryResultsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   document.QueryResultsTable,
-			Columns: []string{document.QueryResultsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

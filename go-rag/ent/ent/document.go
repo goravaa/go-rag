@@ -41,11 +41,9 @@ type DocumentEdges struct {
 	Project *Project `json:"project,omitempty"`
 	// Chunks holds the value of the chunks edge.
 	Chunks []*Chunk `json:"chunks,omitempty"`
-	// QueryResults holds the value of the query_results edge.
-	QueryResults []*QueryResult `json:"query_results,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [2]bool
 }
 
 // ProjectOrErr returns the Project value or an error if the edge
@@ -66,15 +64,6 @@ func (e DocumentEdges) ChunksOrErr() ([]*Chunk, error) {
 		return e.Chunks, nil
 	}
 	return nil, &NotLoadedError{edge: "chunks"}
-}
-
-// QueryResultsOrErr returns the QueryResults value or an error if the edge
-// was not loaded in eager-loading.
-func (e DocumentEdges) QueryResultsOrErr() ([]*QueryResult, error) {
-	if e.loadedTypes[2] {
-		return e.QueryResults, nil
-	}
-	return nil, &NotLoadedError{edge: "query_results"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -169,11 +158,6 @@ func (_m *Document) QueryProject() *ProjectQuery {
 // QueryChunks queries the "chunks" edge of the Document entity.
 func (_m *Document) QueryChunks() *ChunkQuery {
 	return NewDocumentClient(_m.config).QueryChunks(_m)
-}
-
-// QueryQueryResults queries the "query_results" edge of the Document entity.
-func (_m *Document) QueryQueryResults() *QueryResultQuery {
-	return NewDocumentClient(_m.config).QueryQueryResults(_m)
 }
 
 // Update returns a builder for updating this Document.

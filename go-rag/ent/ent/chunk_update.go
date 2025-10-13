@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"go-rag/ent/ent/chunk"
 	"go-rag/ent/ent/document"
-	"go-rag/ent/ent/embedding"
 	"go-rag/ent/ent/predicate"
+	"go-rag/ent/ent/queryresult"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -64,6 +64,26 @@ func (_u *ChunkUpdate) SetNillableContent(v *string) *ChunkUpdate {
 	return _u
 }
 
+// SetContentHash sets the "content_hash" field.
+func (_u *ChunkUpdate) SetContentHash(v string) *ChunkUpdate {
+	_u.mutation.SetContentHash(v)
+	return _u
+}
+
+// SetNillableContentHash sets the "content_hash" field if the given value is not nil.
+func (_u *ChunkUpdate) SetNillableContentHash(v *string) *ChunkUpdate {
+	if v != nil {
+		_u.SetContentHash(*v)
+	}
+	return _u
+}
+
+// ClearContentHash clears the value of the "content_hash" field.
+func (_u *ChunkUpdate) ClearContentHash() *ChunkUpdate {
+	_u.mutation.ClearContentHash()
+	return _u
+}
+
 // SetDocumentID sets the "document" edge to the Document entity by ID.
 func (_u *ChunkUpdate) SetDocumentID(id int) *ChunkUpdate {
 	_u.mutation.SetDocumentID(id)
@@ -83,19 +103,19 @@ func (_u *ChunkUpdate) SetDocument(v *Document) *ChunkUpdate {
 	return _u.SetDocumentID(v.ID)
 }
 
-// AddEmbeddingIDs adds the "embeddings" edge to the Embedding entity by IDs.
-func (_u *ChunkUpdate) AddEmbeddingIDs(ids ...int) *ChunkUpdate {
-	_u.mutation.AddEmbeddingIDs(ids...)
+// AddQueryResultIDs adds the "query_results" edge to the QueryResult entity by IDs.
+func (_u *ChunkUpdate) AddQueryResultIDs(ids ...int) *ChunkUpdate {
+	_u.mutation.AddQueryResultIDs(ids...)
 	return _u
 }
 
-// AddEmbeddings adds the "embeddings" edges to the Embedding entity.
-func (_u *ChunkUpdate) AddEmbeddings(v ...*Embedding) *ChunkUpdate {
+// AddQueryResults adds the "query_results" edges to the QueryResult entity.
+func (_u *ChunkUpdate) AddQueryResults(v ...*QueryResult) *ChunkUpdate {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.AddEmbeddingIDs(ids...)
+	return _u.AddQueryResultIDs(ids...)
 }
 
 // Mutation returns the ChunkMutation object of the builder.
@@ -109,25 +129,25 @@ func (_u *ChunkUpdate) ClearDocument() *ChunkUpdate {
 	return _u
 }
 
-// ClearEmbeddings clears all "embeddings" edges to the Embedding entity.
-func (_u *ChunkUpdate) ClearEmbeddings() *ChunkUpdate {
-	_u.mutation.ClearEmbeddings()
+// ClearQueryResults clears all "query_results" edges to the QueryResult entity.
+func (_u *ChunkUpdate) ClearQueryResults() *ChunkUpdate {
+	_u.mutation.ClearQueryResults()
 	return _u
 }
 
-// RemoveEmbeddingIDs removes the "embeddings" edge to Embedding entities by IDs.
-func (_u *ChunkUpdate) RemoveEmbeddingIDs(ids ...int) *ChunkUpdate {
-	_u.mutation.RemoveEmbeddingIDs(ids...)
+// RemoveQueryResultIDs removes the "query_results" edge to QueryResult entities by IDs.
+func (_u *ChunkUpdate) RemoveQueryResultIDs(ids ...int) *ChunkUpdate {
+	_u.mutation.RemoveQueryResultIDs(ids...)
 	return _u
 }
 
-// RemoveEmbeddings removes "embeddings" edges to Embedding entities.
-func (_u *ChunkUpdate) RemoveEmbeddings(v ...*Embedding) *ChunkUpdate {
+// RemoveQueryResults removes "query_results" edges to QueryResult entities.
+func (_u *ChunkUpdate) RemoveQueryResults(v ...*QueryResult) *ChunkUpdate {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.RemoveEmbeddingIDs(ids...)
+	return _u.RemoveQueryResultIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -175,6 +195,12 @@ func (_u *ChunkUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Content(); ok {
 		_spec.SetField(chunk.FieldContent, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.ContentHash(); ok {
+		_spec.SetField(chunk.FieldContentHash, field.TypeString, value)
+	}
+	if _u.mutation.ContentHashCleared() {
+		_spec.ClearField(chunk.FieldContentHash, field.TypeString)
+	}
 	if _u.mutation.DocumentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -204,28 +230,28 @@ func (_u *ChunkUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.EmbeddingsCleared() {
+	if _u.mutation.QueryResultsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   chunk.EmbeddingsTable,
-			Columns: []string{chunk.EmbeddingsColumn},
+			Table:   chunk.QueryResultsTable,
+			Columns: chunk.QueryResultsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(embedding.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.RemovedEmbeddingsIDs(); len(nodes) > 0 && !_u.mutation.EmbeddingsCleared() {
+	if nodes := _u.mutation.RemovedQueryResultsIDs(); len(nodes) > 0 && !_u.mutation.QueryResultsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   chunk.EmbeddingsTable,
-			Columns: []string{chunk.EmbeddingsColumn},
+			Table:   chunk.QueryResultsTable,
+			Columns: chunk.QueryResultsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(embedding.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -233,15 +259,15 @@ func (_u *ChunkUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.EmbeddingsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.QueryResultsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   chunk.EmbeddingsTable,
-			Columns: []string{chunk.EmbeddingsColumn},
+			Table:   chunk.QueryResultsTable,
+			Columns: chunk.QueryResultsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(embedding.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -304,6 +330,26 @@ func (_u *ChunkUpdateOne) SetNillableContent(v *string) *ChunkUpdateOne {
 	return _u
 }
 
+// SetContentHash sets the "content_hash" field.
+func (_u *ChunkUpdateOne) SetContentHash(v string) *ChunkUpdateOne {
+	_u.mutation.SetContentHash(v)
+	return _u
+}
+
+// SetNillableContentHash sets the "content_hash" field if the given value is not nil.
+func (_u *ChunkUpdateOne) SetNillableContentHash(v *string) *ChunkUpdateOne {
+	if v != nil {
+		_u.SetContentHash(*v)
+	}
+	return _u
+}
+
+// ClearContentHash clears the value of the "content_hash" field.
+func (_u *ChunkUpdateOne) ClearContentHash() *ChunkUpdateOne {
+	_u.mutation.ClearContentHash()
+	return _u
+}
+
 // SetDocumentID sets the "document" edge to the Document entity by ID.
 func (_u *ChunkUpdateOne) SetDocumentID(id int) *ChunkUpdateOne {
 	_u.mutation.SetDocumentID(id)
@@ -323,19 +369,19 @@ func (_u *ChunkUpdateOne) SetDocument(v *Document) *ChunkUpdateOne {
 	return _u.SetDocumentID(v.ID)
 }
 
-// AddEmbeddingIDs adds the "embeddings" edge to the Embedding entity by IDs.
-func (_u *ChunkUpdateOne) AddEmbeddingIDs(ids ...int) *ChunkUpdateOne {
-	_u.mutation.AddEmbeddingIDs(ids...)
+// AddQueryResultIDs adds the "query_results" edge to the QueryResult entity by IDs.
+func (_u *ChunkUpdateOne) AddQueryResultIDs(ids ...int) *ChunkUpdateOne {
+	_u.mutation.AddQueryResultIDs(ids...)
 	return _u
 }
 
-// AddEmbeddings adds the "embeddings" edges to the Embedding entity.
-func (_u *ChunkUpdateOne) AddEmbeddings(v ...*Embedding) *ChunkUpdateOne {
+// AddQueryResults adds the "query_results" edges to the QueryResult entity.
+func (_u *ChunkUpdateOne) AddQueryResults(v ...*QueryResult) *ChunkUpdateOne {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.AddEmbeddingIDs(ids...)
+	return _u.AddQueryResultIDs(ids...)
 }
 
 // Mutation returns the ChunkMutation object of the builder.
@@ -349,25 +395,25 @@ func (_u *ChunkUpdateOne) ClearDocument() *ChunkUpdateOne {
 	return _u
 }
 
-// ClearEmbeddings clears all "embeddings" edges to the Embedding entity.
-func (_u *ChunkUpdateOne) ClearEmbeddings() *ChunkUpdateOne {
-	_u.mutation.ClearEmbeddings()
+// ClearQueryResults clears all "query_results" edges to the QueryResult entity.
+func (_u *ChunkUpdateOne) ClearQueryResults() *ChunkUpdateOne {
+	_u.mutation.ClearQueryResults()
 	return _u
 }
 
-// RemoveEmbeddingIDs removes the "embeddings" edge to Embedding entities by IDs.
-func (_u *ChunkUpdateOne) RemoveEmbeddingIDs(ids ...int) *ChunkUpdateOne {
-	_u.mutation.RemoveEmbeddingIDs(ids...)
+// RemoveQueryResultIDs removes the "query_results" edge to QueryResult entities by IDs.
+func (_u *ChunkUpdateOne) RemoveQueryResultIDs(ids ...int) *ChunkUpdateOne {
+	_u.mutation.RemoveQueryResultIDs(ids...)
 	return _u
 }
 
-// RemoveEmbeddings removes "embeddings" edges to Embedding entities.
-func (_u *ChunkUpdateOne) RemoveEmbeddings(v ...*Embedding) *ChunkUpdateOne {
+// RemoveQueryResults removes "query_results" edges to QueryResult entities.
+func (_u *ChunkUpdateOne) RemoveQueryResults(v ...*QueryResult) *ChunkUpdateOne {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.RemoveEmbeddingIDs(ids...)
+	return _u.RemoveQueryResultIDs(ids...)
 }
 
 // Where appends a list predicates to the ChunkUpdate builder.
@@ -445,6 +491,12 @@ func (_u *ChunkUpdateOne) sqlSave(ctx context.Context) (_node *Chunk, err error)
 	if value, ok := _u.mutation.Content(); ok {
 		_spec.SetField(chunk.FieldContent, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.ContentHash(); ok {
+		_spec.SetField(chunk.FieldContentHash, field.TypeString, value)
+	}
+	if _u.mutation.ContentHashCleared() {
+		_spec.ClearField(chunk.FieldContentHash, field.TypeString)
+	}
 	if _u.mutation.DocumentCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -474,28 +526,28 @@ func (_u *ChunkUpdateOne) sqlSave(ctx context.Context) (_node *Chunk, err error)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.EmbeddingsCleared() {
+	if _u.mutation.QueryResultsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   chunk.EmbeddingsTable,
-			Columns: []string{chunk.EmbeddingsColumn},
+			Table:   chunk.QueryResultsTable,
+			Columns: chunk.QueryResultsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(embedding.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.RemovedEmbeddingsIDs(); len(nodes) > 0 && !_u.mutation.EmbeddingsCleared() {
+	if nodes := _u.mutation.RemovedQueryResultsIDs(); len(nodes) > 0 && !_u.mutation.QueryResultsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   chunk.EmbeddingsTable,
-			Columns: []string{chunk.EmbeddingsColumn},
+			Table:   chunk.QueryResultsTable,
+			Columns: chunk.QueryResultsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(embedding.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -503,15 +555,15 @@ func (_u *ChunkUpdateOne) sqlSave(ctx context.Context) (_node *Chunk, err error)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.EmbeddingsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.QueryResultsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
-			Table:   chunk.EmbeddingsTable,
-			Columns: []string{chunk.EmbeddingsColumn},
+			Table:   chunk.QueryResultsTable,
+			Columns: chunk.QueryResultsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(embedding.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

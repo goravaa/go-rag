@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"go-rag/ent/ent/chunk"
 	"go-rag/ent/ent/document"
-	"go-rag/ent/ent/embedding"
 	"go-rag/ent/ent/project"
 	"go-rag/ent/ent/queryresult"
 	"go-rag/ent/ent/securityquestion"
@@ -83,7 +82,6 @@ func checkColumn(t, c string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			chunk.Table:            chunk.ValidColumn,
 			document.Table:         document.ValidColumn,
-			embedding.Table:        embedding.ValidColumn,
 			project.Table:          project.ValidColumn,
 			queryresult.Table:      queryresult.ValidColumn,
 			securityquestion.Table: securityquestion.ValidColumn,

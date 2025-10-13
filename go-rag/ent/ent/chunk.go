@@ -21,6 +21,8 @@ type Chunk struct {
 	Index int `json:"index,omitempty"`
 	// Content holds the value of the "content" field.
 	Content string `json:"content,omitempty"`
+	// ContentHash holds the value of the "content_hash" field.
+	ContentHash string `json:"content_hash,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ChunkQuery when eager-loading is set.
 	Edges           ChunkEdges `json:"edges"`
@@ -32,8 +34,8 @@ type Chunk struct {
 type ChunkEdges struct {
 	// Document holds the value of the document edge.
 	Document *Document `json:"document,omitempty"`
-	// Embeddings holds the value of the embeddings edge.
-	Embeddings []*Embedding `json:"embeddings,omitempty"`
+	// QueryResults holds the value of the query_results edge.
+	QueryResults []*QueryResult `json:"query_results,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
@@ -50,13 +52,13 @@ func (e ChunkEdges) DocumentOrErr() (*Document, error) {
 	return nil, &NotLoadedError{edge: "document"}
 }
 
-// EmbeddingsOrErr returns the Embeddings value or an error if the edge
+// QueryResultsOrErr returns the QueryResults value or an error if the edge
 // was not loaded in eager-loading.
-func (e ChunkEdges) EmbeddingsOrErr() ([]*Embedding, error) {
+func (e ChunkEdges) QueryResultsOrErr() ([]*QueryResult, error) {
 	if e.loadedTypes[1] {
-		return e.Embeddings, nil
+		return e.QueryResults, nil
 	}
-	return nil, &NotLoadedError{edge: "embeddings"}
+	return nil, &NotLoadedError{edge: "query_results"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -66,7 +68,7 @@ func (*Chunk) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case chunk.FieldID, chunk.FieldIndex:
 			values[i] = new(sql.NullInt64)
-		case chunk.FieldContent:
+		case chunk.FieldContent, chunk.FieldContentHash:
 			values[i] = new(sql.NullString)
 		case chunk.ForeignKeys[0]: // document_chunks
 			values[i] = new(sql.NullInt64)
@@ -103,6 +105,12 @@ func (_m *Chunk) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Content = value.String
 			}
+		case chunk.FieldContentHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field content_hash", values[i])
+			} else if value.Valid {
+				_m.ContentHash = value.String
+			}
 		case chunk.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field document_chunks", value)
@@ -128,9 +136,9 @@ func (_m *Chunk) QueryDocument() *DocumentQuery {
 	return NewChunkClient(_m.config).QueryDocument(_m)
 }
 
-// QueryEmbeddings queries the "embeddings" edge of the Chunk entity.
-func (_m *Chunk) QueryEmbeddings() *EmbeddingQuery {
-	return NewChunkClient(_m.config).QueryEmbeddings(_m)
+// QueryQueryResults queries the "query_results" edge of the Chunk entity.
+func (_m *Chunk) QueryQueryResults() *QueryResultQuery {
+	return NewChunkClient(_m.config).QueryQueryResults(_m)
 }
 
 // Update returns a builder for updating this Chunk.
@@ -161,6 +169,9 @@ func (_m *Chunk) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("content=")
 	builder.WriteString(_m.Content)
+	builder.WriteString(", ")
+	builder.WriteString("content_hash=")
+	builder.WriteString(_m.ContentHash)
 	builder.WriteByte(')')
 	return builder.String()
 }

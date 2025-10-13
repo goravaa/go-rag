@@ -9,7 +9,6 @@ import (
 	"go-rag/ent/ent/chunk"
 	"go-rag/ent/ent/document"
 	"go-rag/ent/ent/project"
-	"go-rag/ent/ent/queryresult"
 	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -109,21 +108,6 @@ func (_c *DocumentCreate) AddChunks(v ...*Chunk) *DocumentCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddChunkIDs(ids...)
-}
-
-// AddQueryResultIDs adds the "query_results" edge to the QueryResult entity by IDs.
-func (_c *DocumentCreate) AddQueryResultIDs(ids ...int) *DocumentCreate {
-	_c.mutation.AddQueryResultIDs(ids...)
-	return _c
-}
-
-// AddQueryResults adds the "query_results" edges to the QueryResult entity.
-func (_c *DocumentCreate) AddQueryResults(v ...*QueryResult) *DocumentCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddQueryResultIDs(ids...)
 }
 
 // Mutation returns the DocumentMutation object of the builder.
@@ -257,22 +241,6 @@ func (_c *DocumentCreate) createSpec() (*Document, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(chunk.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.QueryResultsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   document.QueryResultsTable,
-			Columns: []string{document.QueryResultsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(queryresult.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -179,7 +179,7 @@ func (s *Service) UpdateDocument(ctx context.Context, req UpdateDocumentRequest)
 	return updatedDoc, nil
 }
 
-// DeleteDocument deletes a document, ensuring the user has ownership via the parent project.
+// DeleteDocument deletes a document and its associated vectors.
 func (s *Service) DeleteDocument(ctx context.Context, documentID int, ownerID uuid.UUID) error {
 	log := logrus.WithFields(logrus.Fields{
 		"document_id": documentID,
@@ -187,26 +187,36 @@ func (s *Service) DeleteDocument(ctx context.Context, documentID int, ownerID uu
 	})
 	log.Info("service: deleting document")
 
-	// The delete operation is filtered by document ID and ownership of the parent project.
-	n, err := s.Client.Document.
-		Delete().
+	// First, verify the user owns the document before doing anything.
+	// We get the document here to ensure it exists and belongs to the user.
+	_, err := s.Client.Document.
+		Query().
 		Where(
 			document.ID(documentID),
 			document.HasProjectWith(
 				project.HasOwnerWith(user.ID(ownerID)),
 			),
 		).
-		Exec(ctx)
-
+		Only(ctx)
 	if err != nil {
-		log.WithError(err).Error("service: failed to delete document from database")
-		return err
-	}
-	if n == 0 {
-		log.Warn("service: document not found or access denied for deletion")
+		log.WithError(err).Warn("service: document not found or access denied for deletion")
 		return fmt.Errorf("document not found or access denied")
 	}
 
-	log.Info("service: document deleted successfully")
+	// Delete associated vectors from Qdrant.
+	if err := s.EmbedService.DeleteDocumentVectors(ctx, documentID); err != nil {
+		// Log the error but still proceed with DB deletion.
+		// Depending on requirements, you might want to stop here if Qdrant fails.
+		log.WithError(err).Error("service: failed to delete document vectors from Qdrant")
+	}
+
+	// Now, delete the document from Postgres. The database's ON DELETE CASCADE
+	// will automatically delete all associated chunks.
+	if err := s.Client.Document.DeleteOneID(documentID).Exec(ctx); err != nil {
+		log.WithError(err).Error("service: failed to delete document from database")
+		return err
+	}
+
+	log.Info("service: document deleted successfully from all stores")
 	return nil
 }

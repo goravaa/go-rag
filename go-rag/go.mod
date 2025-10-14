@@ -13,6 +13,8 @@ require (
 	golang.org/x/crypto v0.40.0
 )
 
+require github.com/qdrant/go-client v1.15.2 // indirect
+
 require (
 	golang.org/x/net v0.42.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251007200510-49b9836ed3ff // indirect

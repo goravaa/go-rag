@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -10,11 +11,13 @@ import (
 
 	"go-rag/internal/auth"
 	"go-rag/internal/db"
-	"go-rag/internal/documents" // Import the new documents package
+	"go-rag/internal/documents"
 	"go-rag/internal/handlers"
 	"go-rag/internal/projects"
 	"go-rag/internal/user"
+
 	"go-rag/services/embed"
+	"go-rag/services/qdrant"
 )
 
 func main() {
@@ -46,6 +49,16 @@ func main() {
 		}
 	}()
 
+	qdrantPointsClient, qdrantCollectionsClient, qdrantConn, err := qdrant.NewClient(context.Background())
+	if err != nil {
+		logrus.WithError(err).Fatal("could not create qdrant client")
+	}
+	defer qdrantConn.Close()
+
+	if err := qdrant.EnsureCollectionExists(context.Background(), qdrantCollectionsClient, qdrantPointsClient, embed.CollectionName); err != nil {
+		logrus.WithError(err).Fatal("failed to ensure qdrant collection exists")
+	}
+
 	inferenceClient, conn, err := embed.NewClient()
 	if err != nil {
 		logrus.WithError(err).Fatal("could not create inference client")
@@ -59,8 +72,9 @@ func main() {
 	logrus.Debug("initializing services")
 	userService := &user.Service{Client: client}
 	projectService := &projects.Service{Client: client}
-	embedService := &embed.Service{Client: client, InferenceClient: inferenceClient}
+	embedService := &embed.Service{Client: client, InferenceClient: inferenceClient, QdrantPointsClient: qdrantPointsClient}
 	documentService := &documents.Service{Client: client, EmbedService: embedService}
+
 	authHandler := &handlers.AuthHandler{UserService: userService}
 	projectHandler := &handlers.ProjectHandler{ProjectService: projectService}
 	documentHandler := &handlers.DocumentHandler{DocumentService: documentService}

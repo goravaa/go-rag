@@ -2,6 +2,8 @@ package embed
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"fmt"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -11,17 +13,24 @@ import (
 
 // Chunk represents a piece of content to be embedded.
 type Chunk struct {
-	Content  string
-	Metadata map[string]interface{}
+	Content     string
+	ContentHash string
+	Metadata    map[string]interface{}
+}
+
+// getContentHash calculates the SHA256 hash of a string.
+func getContentHash(content string) string {
+	hashBytes := sha256.Sum256([]byte(content))
+	return fmt.Sprintf("%x", hashBytes)
 }
 
 // Approximation: target maximum words per chunk
-const maxWordsPerChunk = 256 // Reduced for better context sizing
+const maxWordsPerChunk = 256
 
 // Markdown heading level to split sections (Level 2 => ##)
 const headingLevelToSplit = 2
 
-// ChunkMarkdown precisely splits Markdown content by iterating through its main blocks.
+// ChunkMarkdown precisely splits Markdown content and calculates a hash for each chunk.
 func ChunkMarkdown(content string) []Chunk {
 	mdParser := goldmark.New()
 	reader := text.NewReader([]byte(content))
@@ -31,28 +40,24 @@ func ChunkMarkdown(content string) []Chunk {
 	var currentChunk bytes.Buffer
 	var currentHeadings []string
 
-	// Instead of ast.Walk, we iterate through the document's main blocks. This is safer.
 	for node := docAST.FirstChild(); node != nil; node = node.NextSibling() {
-		// Check if the current block is a heading of the level we want to split by.
 		if heading, ok := node.(*ast.Heading); ok && heading.Level == headingLevelToSplit {
-			// If the current chunk has content, finalize it and add it to our list.
 			if currentChunk.Len() > 0 {
 				chunks = append(chunks, splitSectionByWords(currentChunk.String(), currentHeadings)...)
 			}
-			// Reset the buffer and update the current heading context.
 			currentChunk.Reset()
 			currentHeadings = []string{string(heading.Text(reader.Source()))}
 		}
+		if node.Lines() == nil || node.Lines().Len() == 0 {
+			continue
+		}
 
-		// Append the raw text of the current block to the chunk buffer.
-		// This is safe because we are only iterating over block-level nodes.
 		start := node.Lines().At(0).Start
 		end := node.Lines().At(node.Lines().Len() - 1).Stop
 		currentChunk.Write(reader.Source()[start:end])
-		currentChunk.WriteString("\n\n") // Add double newline for paragraph separation
+		currentChunk.WriteString("\n\n")
 	}
 
-	// Don't forget the very last chunk in the file.
 	if currentChunk.Len() > 0 {
 		chunks = append(chunks, splitSectionByWords(currentChunk.String(), currentHeadings)...)
 	}
@@ -60,7 +65,7 @@ func ChunkMarkdown(content string) []Chunk {
 	return chunks
 }
 
-// splitSectionByWords splits a section if it exceeds maxWordsPerChunk.
+// splitSectionByWords splits a section and adds content hashes.
 func splitSectionByWords(section string, headings []string) []Chunk {
 	var finalChunks []Chunk
 	words := strings.Fields(section)
@@ -70,9 +75,11 @@ func splitSectionByWords(section string, headings []string) []Chunk {
 	}
 
 	if len(words) <= maxWordsPerChunk {
+		content := strings.TrimSpace(section)
 		finalChunks = append(finalChunks, Chunk{
-			Content:  section,
-			Metadata: map[string]interface{}{"headings": strings.Join(headings, " > ")},
+			Content:     content,
+			ContentHash: getContentHash(content),
+			Metadata:    map[string]interface{}{"headings": strings.Join(headings, " > ")},
 		})
 	} else {
 		var buf strings.Builder
@@ -83,26 +90,33 @@ func splitSectionByWords(section string, headings []string) []Chunk {
 			currentWordCount++
 
 			if currentWordCount >= maxWordsPerChunk {
+				content := strings.TrimSpace(buf.String())
 				finalChunks = append(finalChunks, Chunk{
-					Content:  strings.TrimSpace(buf.String()),
-					Metadata: map[string]interface{}{"headings": strings.Join(headings, " > ")},
+					Content:     content,
+					ContentHash: getContentHash(content),
+					Metadata:    map[string]interface{}{"headings": strings.Join(headings, " > ")},
 				})
 				buf.Reset()
 				currentWordCount = 0
 			}
 		}
 		if buf.Len() > 0 {
+			content := strings.TrimSpace(buf.String())
 			finalChunks = append(finalChunks, Chunk{
-				Content:  strings.TrimSpace(buf.String()),
-				Metadata: map[string]interface{}{"headings": strings.Join(headings, " > ")},
+				Content:     content,
+				ContentHash: getContentHash(content),
+				Metadata:    map[string]interface{}{"headings": strings.Join(headings, " > ")},
 			})
 		}
 	}
 	return finalChunks
 }
 
-// chunkCodeFile treats code files as one chunk for now.
+// chunkCodeFile treats code files as one chunk and adds a content hash.
 func chunkCodeFile(content string) []Chunk {
-	// TODO: Later, you can implement a proper AST-based chunker for code here.
-	return []Chunk{{Content: content}}
+	trimmedContent := strings.TrimSpace(content)
+	return []Chunk{{
+		Content:     trimmedContent,
+		ContentHash: getContentHash(trimmedContent),
+	}}
 }
